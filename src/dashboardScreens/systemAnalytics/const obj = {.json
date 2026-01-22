@@ -1,0 +1,48 @@
+
+// const userdata = [
+//     {
+//         "name": "Sarah O.",
+//         "title": "Device not syncing",
+//         "status": "Open",
+//         "submittedOn": "Apr 8, 2025",
+//         "assignedTo": "Not assigned"
+//     },
+//     {
+//         "name": "james",
+//         "title": "Device not syncing",
+//         "status": "Open",
+//         "submittedOn": "Apr 10, 2025",
+//         "assignedTo": "assigned"
+//     },
+//     {
+//         "name": "Sarah O.",
+//         "title": "Device not syncing",
+//         "status": "Open",
+//         "submittedOn": "Apr 8, 2025",
+//         "assignedTo": "Not assigned"
+//     },
+//     {
+//         "name": "james",
+//         "title": "Device not syncing",
+//         "status": "Open",
+//         "submittedOn": "Apr 10, 2025",
+//         "assignedTo": "assigned"
+//     }  
+// ]
+
+
+// const oneUserData = {
+//     "name": "Sarah O.",
+//     "title": "Device not syncing",
+//     "status": "Open",
+//     "submittedOn": "Apr 8, 2025",
+//     "assignedTo": "Not assigned"
+// } 
+
+// const scondUserData = {
+//     "name": "james",
+//     "title": "Device not syncing",
+//     "status": "Open",
+//     "submittedOn": "Apr 10, 2025",
+//     "assignedTo": "assigned"
+// } 
