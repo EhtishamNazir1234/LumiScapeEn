@@ -1,6 +1,6 @@
 import { chats } from "../../../dummyData";
 import profilePic from "../../assets/profile.svg";
-import { truncateText } from "../../hepers";
+import { truncateText } from "../../helpers";
 import UserListModal from "../../common/UserListModal";
 import React, { useState } from "react";
 import { userList } from "../../../dummyData";
