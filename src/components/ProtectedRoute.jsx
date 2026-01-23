@@ -1,17 +1,10 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getRoleBasedRoute, hasRoleAccess } from '../utils/roleRouting';
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { isAuthenticated, user, loading } = useAuth();
-
-  // TEMPORARY: Bypass authentication for screenshots
-  // TODO: Remove this bypass after taking screenshots
-  const BYPASS_AUTH = true; // Set to false to re-enable authentication
-
-  if (BYPASS_AUTH) {
-    return children;
-  }
 
   if (loading) {
     return (
@@ -26,8 +19,10 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   }
 
   // Check if user role is allowed
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
-    return <Navigate to="/" replace />;
+  if (allowedRoles.length > 0 && !hasRoleAccess(user?.role, allowedRoles)) {
+    // Redirect to role-appropriate dashboard instead of just "/"
+    const roleRoute = getRoleBasedRoute(user?.role);
+    return <Navigate to={roleRoute} replace />;
   }
 
   return children;

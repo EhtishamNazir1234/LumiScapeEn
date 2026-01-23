@@ -12,33 +12,11 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  // TEMPORARY: Mock user for screenshots
-  // TODO: Remove this after taking screenshots
-  const BYPASS_AUTH = true;
-  
-  const mockUser = {
-    _id: 'mock-user-id',
-    name: 'Admin User',
-    email: 'admin@lumiscape.com',
-    role: 'super-admin',
-    userId: 'ADMIN-001',
-    subscription: 'Premium',
-    subscriptionStatus: 'Active',
-    country: 'Nigeria',
-    status: 'Active'
-  };
-
-  const [user, setUser] = useState(BYPASS_AUTH ? mockUser : null);
-  const [loading, setLoading] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(BYPASS_AUTH);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Skip auth check if bypassing
-    if (BYPASS_AUTH) {
-      setLoading(false);
-      return;
-    }
-
     // Check if user is already logged in
     const token = localStorage.getItem('token');
     const userInfo = localStorage.getItem('userInfo');

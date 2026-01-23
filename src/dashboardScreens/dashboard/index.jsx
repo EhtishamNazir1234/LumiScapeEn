@@ -7,6 +7,7 @@ import DashboardAnalytics from "./Analytics";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("tickets/Complaints");
+  const [isFilterBarOpen, setIsFilterBarOpen] = useState(false);
   return (
     <div className="space-y-5">
       <div className="">

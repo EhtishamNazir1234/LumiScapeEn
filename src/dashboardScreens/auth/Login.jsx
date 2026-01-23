@@ -4,6 +4,7 @@ import loginImage from "../../assets/login.png";
 import InputField from "../../common/InputField";
 import Logo from "../../assets/logo.svg";
 import { useAuth } from "../../context/AuthContext";
+import { getRoleBasedRoute } from "../../utils/roleRouting";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -26,8 +27,10 @@ const Login = () => {
     }
 
     try {
-      await login(email, password, rememberMe);
-      navigate("/");
+      const userData = await login(email, password, rememberMe);
+      // Redirect based on user role
+      const roleBasedRoute = getRoleBasedRoute(userData?.role);
+      navigate(roleBasedRoute);
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please check your credentials.");
     } finally {

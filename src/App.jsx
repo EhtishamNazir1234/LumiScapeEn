@@ -27,14 +27,26 @@ import HelpCenter from "./dashboardScreens/enterpriseDashboard/helpCenter/Index.
 import EnterpriseDashboard from "./dashboardScreens/enterpriseDashboard/dashboard/Index.jsx";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { getRoleBasedRoute } from "./utils/roleRouting";
+
+// Component to handle role-based dashboard routing
+const RoleBasedDashboard = () => {
+  const { user } = useAuth();
+  const roleRoute = getRoleBasedRoute(user?.role);
+  
+  // If user should go to a different dashboard, redirect them
+  if (roleRoute !== '/') {
+    return <Navigate to={roleRoute} replace />;
+  }
+  
+  // Otherwise show the admin/super-admin dashboard
+  return <Dashboard />;
+};
 
 function AppRoutes() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
 
-  // TEMPORARY: Bypass auth check for screenshots
-  const BYPASS_AUTH = true;
-
-  if (loading && !BYPASS_AUTH) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-lg">Loading...</div>
@@ -46,7 +58,13 @@ function AppRoutes() {
     <Routes>
       <Route 
         path="/login" 
-        element={BYPASS_AUTH || isAuthenticated ? <Navigate to="/" replace /> : <Login />} 
+        element={
+          isAuthenticated ? (
+            <Navigate to={getRoleBasedRoute(user?.role)} replace />
+          ) : (
+            <Login />
+          )
+        } 
       />
       <Route path="/login-verification" element={<LoginVerification />} />
       <Route
@@ -56,8 +74,22 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/enterpriseDashboard" element={<EnterpriseDashboard />} />
+        <Route 
+          path="/" 
+          element={
+            <ProtectedRoute>
+              <RoleBasedDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/enterpriseDashboard" 
+          element={
+            <ProtectedRoute allowedRoles={["enterprise", "end-user"]}>
+              <EnterpriseDashboard />
+            </ProtectedRoute>
+          } 
+        />
         <Route
           path="/supplier-management"
           element={

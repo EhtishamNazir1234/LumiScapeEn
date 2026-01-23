@@ -11,6 +11,7 @@ const Subscription = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("subscriptions");
   const [billingCycleTab, setBillingCycleTab] = useState("monthly");
+  const [isFilterBarOpen, setIsFilterBarOpen] = useState(false);
   return (
     <>
       <RevenueAnalytic />
