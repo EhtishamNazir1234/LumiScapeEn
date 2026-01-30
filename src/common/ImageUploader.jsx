@@ -1,15 +1,15 @@
-import React, { useState } from "react";
+import React from "react";
 import { PiCameraLight } from "react-icons/pi";
 
-const ImageUploader = () => {
-  const [profilePhoto, setProfilePhoto] = useState(null);
+const ImageUploader = ({ value, onChange }) => {
+  const displayImage = value;
 
   const handleImageChange = (event) => {
     const file = event.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = () => {
-        setProfilePhoto(reader.result);
+        onChange?.(reader.result);
       };
       reader.readAsDataURL(file);
     }
@@ -18,9 +18,9 @@ const ImageUploader = () => {
   return (
     <div className="bg-gray-100 flex items-center">
       <div className="relative rounded-full overflow-hidden cursor-pointer hover:border-gray-500 transition duration-300 ease-in-out">
-        {profilePhoto ? (
+        {displayImage ? (
           <img
-            src={profilePhoto}
+            src={displayImage}
             alt="Profile Photo"
             className="w-32 h-32 object-cover rounded-full"
           />

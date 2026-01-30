@@ -16,7 +16,8 @@ export const authService = {
         subscriptionStatus: response.data.subscriptionStatus,
         country: response.data.country,
         status: response.data.status,
-        lastLogin: response.data.lastLogin
+        lastLogin: response.data.lastLogin,
+        profileImage: response.data.profileImage
       }));
     }
     return response.data;

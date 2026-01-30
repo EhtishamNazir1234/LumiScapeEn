@@ -57,7 +57,14 @@ const NavBar = () => {
             </div>
           )}
         </div>
-        <img src={profileImage} width={50} height={50} ref={profileRef} />
+        <img
+          src={user?.profileImage || profileImage}
+          alt="Profile"
+          width={50}
+          height={50}
+          className="w-[50px] h-[50px] object-cover rounded-full"
+          ref={profileRef}
+        />
       </div>
     </div>
   );

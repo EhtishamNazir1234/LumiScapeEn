@@ -61,10 +61,10 @@ router.post('/register', [
 });
 
 // @route   POST /api/auth/login
-// @desc    Authenticate user and get token
+// @desc    Authenticate user and get token (email or phone)
 // @access  Public
 router.post('/login', [
-  body('email').isEmail().withMessage('Please provide a valid email'),
+  body('email').trim().notEmpty().withMessage('Email or phone is required'),
   body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {
   try {
@@ -74,12 +74,17 @@ router.post('/login', [
     }
 
     const { email, password, rememberMe } = req.body;
+    const identifier = (email || '').trim();
 
-    // Find user and include password field
-    const user = await User.findOne({ email }).select('+password');
-    
+    // Find by email if input contains @, otherwise by phone
+    const isEmail = identifier.includes('@');
+    const query = isEmail
+      ? { email: identifier }
+      : { phone: identifier };
+    const user = await User.findOne(query).select('+password');
+
     if (!user) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+      return res.status(401).json({ message: 'Invalid email/phone or password' });
     }
 
     // Check if user is active
@@ -115,6 +120,7 @@ router.post('/login', [
       country: user.country,
       status: user.status,
       lastLogin: user.lastLogin,
+      profileImage: user.profileImage,
       token
     });
   } catch (error) {

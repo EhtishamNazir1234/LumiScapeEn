@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { authService } from '../services/auth.service';
+import { userService } from '../services/user.service';
 
 const AuthContext = createContext();
 
@@ -71,12 +72,21 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
   };
 
+  const updateProfile = async (profileData) => {
+    if (!user?._id) throw new Error('Not authenticated');
+    const updatedUser = await userService.update(user._id, profileData);
+    setUser(updatedUser);
+    localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+    return updatedUser;
+  };
+
   const value = {
     user,
     loading,
     isAuthenticated,
     login,
     logout,
+    updateProfile,
     setUser
   };
 

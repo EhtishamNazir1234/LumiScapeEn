@@ -140,9 +140,19 @@ router.put('/:id', [
       delete req.body.role;
     }
 
+    // When user updates own profile, only allow specific fields (including profileImage)
+    const isSelfUpdate = req.user._id.toString() === req.params.id;
+    const allowedSelfFields = ['name', 'email', 'phone', 'profileImage'];
+    const updatePayload = isSelfUpdate
+      ? allowedSelfFields.reduce((acc, key) => {
+          if (req.body[key] !== undefined) acc[key] = req.body[key];
+          return acc;
+        }, {})
+      : req.body;
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { $set: req.body },
+      { $set: updatePayload },
       { new: true, runValidators: true }
     ).select('-password');
 

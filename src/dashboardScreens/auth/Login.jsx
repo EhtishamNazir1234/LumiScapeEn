@@ -7,7 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import { getRoleBasedRoute } from "../../utils/roleRouting";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
+  const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
@@ -20,14 +20,14 @@ const Login = () => {
     setError("");
     setLoading(true);
 
-    if (!email || !password) {
-      setError("Please fill in all fields");
+    if (!emailOrPhone?.trim() || !password) {
+      setError("Please enter your email or phone number and password");
       setLoading(false);
       return;
     }
 
     try {
-      const userData = await login(email, password, rememberMe);
+      const userData = await login(emailOrPhone.trim(), password, rememberMe);
       // Redirect based on user role
       const roleBasedRoute = getRoleBasedRoute(userData?.role);
       navigate(roleBasedRoute);
@@ -74,12 +74,12 @@ const Login = () => {
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div>
                 <InputField
-                  id="email"
+                  id="emailOrPhone"
                   label="Email or Phone number"
-                  type="email"
-                  placeholder="hu******@gmail.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  placeholder="Email or mobile number"
+                  value={emailOrPhone}
+                  onChange={(e) => setEmailOrPhone(e.target.value)}
                   rounded
                   color="#0060A9"
                   required

@@ -214,6 +214,7 @@ const Sidebar = ({}) => {
             const isBottomItem =
               (key === "settings " || key === "logout") &&
               (arr.slice(idx).filter((i) => i.key === "settings " || i.key === "logout").length >= 1);
+            const isLogoutRightAfterSettings = key === "logout" && arr[idx - 1]?.key === "settings ";
             return (
               <div
                 key={key}
@@ -235,7 +236,7 @@ const Sidebar = ({}) => {
                   isActive
                     ? "text-white bg-[linear-gradient(to_right,#96F6AE,#2A7BB6)]"
                     : ""
-                } ${isBottomItem ? "mt-auto" : ""}`}
+                } ${isBottomItem ? "mt-auto" : ""} ${isLogoutRightAfterSettings ? "!mt-0" : ""}`}
               >
                 <Icon fill={isActive ? "#fff" : "#000"} className="w-6 h-6" />
                 {isExpandSideBar && (
