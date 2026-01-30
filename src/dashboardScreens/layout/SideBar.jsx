@@ -105,33 +105,33 @@ const menuItems = [
     key:"dashboard",
     label:"Dashboard",
     Icon:DashboardIcon,
-    roles:["enterprise"],
+    roles:["enterprise", "end-user"],
     navigate:"/enterpriseDashboard",
   },
   {
     key: "reports ",
     label: "Reports ",
     Icon:EnterpriseReports,
-    roles: ["enterprise"],
+    roles: ["enterprise", "end-user"],
     navigate: "/reports",
   },
   {
     key: "helpCenter ",
     label: "Help Center ",
     Icon:HelpCenterIcon,
-    roles: ["enterprise"],
+    roles: ["enterprise", "end-user"],
     navigate: "/help-center",
   },
   {
     key: "logout",
     label: "Logout",
     Icon: Logout,
-    roles: ["super-admin","admin"],
+    roles: ["super-admin", "admin", "enterprise", "end-user"],
   },
 ];
 
 const Sidebar = ({}) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const [isExpandSideBar, setIsExpandSideBar] = useState(
     window.innerWidth > 1024
@@ -211,17 +211,19 @@ const Sidebar = ({}) => {
           .filter((item) => item.roles.includes(userRole))
           .map(({ key, label, Icon, navigate: path }, idx, arr) => {
             const isActive = path === location.pathname;
-            const isFirstBottom =
+            const isBottomItem =
               (key === "settings " || key === "logout") &&
-              arr
-                .slice(idx)
-                .filter((i) => i.key === "settings " || i.key === "logout")
-                .length === 2;
+              (arr.slice(idx).filter((i) => i.key === "settings " || i.key === "logout").length >= 1);
             return (
               <div
                 key={key}
                 onClick={() => {
-                  if (path) navigate(path);
+                  if (key === "logout") {
+                    logout();
+                    navigate("/login", { replace: true });
+                  } else if (path) {
+                    navigate(path);
+                  }
                   if (isMobile) setIsExpandSideBar(false);
                 }}
                 style={
@@ -233,7 +235,7 @@ const Sidebar = ({}) => {
                   isActive
                     ? "text-white bg-[linear-gradient(to_right,#96F6AE,#2A7BB6)]"
                     : ""
-                } ${isFirstBottom ? "mt-auto" : ""}`}
+                } ${isBottomItem ? "mt-auto" : ""}`}
               >
                 <Icon fill={isActive ? "#fff" : "#000"} className="w-6 h-6" />
                 {isExpandSideBar && (
