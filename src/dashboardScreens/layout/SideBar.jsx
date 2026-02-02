@@ -76,7 +76,7 @@ const menuItems = [
     key: "chat",
     label: "Chat",
     Icon: Chat,
-    roles: ["super-admin","admin"],
+    roles: ["super-admin", "admin", "enterprise", "end-user"],
     navigate: "/chat",
   },
   {

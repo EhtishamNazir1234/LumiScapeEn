@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import loginImage from "../../assets/login.png";
 import InputField from "../../common/InputField";
 import Logo from "../../assets/logo.svg";
@@ -116,9 +116,9 @@ const Login = () => {
                 />
                 Remember me
               </label>
-              <a href="#" className="hover:underline font-light text-[#669FCB]">
+              <Link to="/forgot-password" className="hover:underline font-light text-[#669FCB]">
                 Forgot password?
-              </a>
+              </Link>
             </div>
           </div>
         </div>

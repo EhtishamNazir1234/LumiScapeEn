@@ -1,11 +1,27 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { Chat, Message } from '../models/Chat.model.js';
+import User from '../models/User.model.js';
 import { protect } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
 router.use(protect);
+
+// @route   GET /api/chat/available-users
+// @desc    Get users available to start a chat with (all roles)
+// @access  Private
+router.get('/available-users', async (req, res) => {
+  try {
+    const users = await User.find({ _id: { $ne: req.user._id }, status: { $ne: 'Archived' } })
+      .select('_id name email profileImage')
+      .sort({ name: 1 });
+    res.json(users);
+  } catch (error) {
+    console.error('Get available users error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // @route   GET /api/chat
 // @desc    Get all chats for current user
@@ -13,7 +29,7 @@ router.use(protect);
 router.get('/', async (req, res) => {
   try {
     const chats = await Chat.find({ participants: req.user._id })
-      .populate('participants', 'name email userId')
+      .populate('participants', 'name email userId profileImage')
       .sort({ lastMessageTime: -1 });
     
     res.json(chats);
@@ -40,7 +56,7 @@ router.get('/:chatId/messages', async (req, res) => {
     }
 
     const messages = await Message.find({ chatId: req.params.chatId })
-      .populate('sender', 'name email userId')
+      .populate('sender', 'name email userId profileImage')
       .sort({ createdAt: 1 });
     
     res.json(messages);
@@ -76,7 +92,7 @@ router.post('/', [
     }
 
     const populatedChat = await Chat.findById(chat._id)
-      .populate('participants', 'name email userId');
+      .populate('participants', 'name email userId profileImage');
     
     res.status(201).json(populatedChat);
   } catch (error) {
@@ -86,15 +102,17 @@ router.post('/', [
 });
 
 // @route   POST /api/chat/:chatId/messages
-// @desc    Send message in chat
+// @desc    Send message in chat (text and/or image)
 // @access  Private
 router.post('/:chatId/messages', [
-  body('text').trim().notEmpty().withMessage('Message text is required')
+  body('text').optional().trim(),
+  body('image').optional()
 ], async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+    const text = (req.body.text || '').trim();
+    const image = req.body.image || null;
+    if (!text && !image) {
+      return res.status(400).json({ message: 'Message must contain text or an image' });
     }
 
     const chat = await Chat.findById(req.params.chatId);
@@ -112,17 +130,24 @@ router.post('/:chatId/messages', [
       chatId: req.params.chatId,
       sender: req.user._id,
       senderName: req.user.name,
-      text: req.body.text
+      text: text || (image ? '[Image]' : ''),
+      image: image || undefined
     });
 
     // Update chat last message
-    chat.lastMessage = req.body.text;
+    chat.lastMessage = text || (image ? '[Image]' : '');
     chat.lastMessageTime = new Date();
     chat.unreadCount += 1;
     await chat.save();
 
     const populatedMessage = await Message.findById(message._id)
-      .populate('sender', 'name email userId');
+      .populate('sender', 'name email userId profileImage');
+
+    // Realtime: emit to all participants in this chat
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`chat:${req.params.chatId}`).emit('new_message', populatedMessage);
+    }
     
     res.status(201).json(populatedMessage);
   } catch (error) {

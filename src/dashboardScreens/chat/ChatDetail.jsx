@@ -1,90 +1,287 @@
-import { messages } from "../../../dummyData";
+import React, { useState, useRef, useEffect } from "react";
 import profilePic from "../../assets/profile.svg";
 import emogiIcon from "../../assets/emogiIcon.svg";
 import gallaryIcon from "../../assets/gallaryIcon.svg";
+import { useChat } from "../../context/ChatContext";
+import { useAuth } from "../../context/AuthContext";
+import EmojiPicker from "emoji-picker-react";
 
-const ChatDetails = () => {
+const formatMessageTime = (dateStr) => {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const ChatDetails = ({ onBack }) => {
+  const { user } = useAuth();
+  const { activeChatId, activeChat, messages, sendMessage, loadingMessages, sending, error, isUserOnline } = useChat();
+  const [inputText, setInputText] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [pendingImage, setPendingImage] = useState(null);
+  const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
+  const emojiPickerRef = useRef(null);
+
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    const handleClickOutside = (e) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target)) setShowEmojiPicker(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showEmojiPicker]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSend = async (e) => {
+    e?.preventDefault();
+    if ((!inputText.trim() && !pendingImage) || !activeChatId || sending) return;
+    try {
+      await sendMessage(activeChatId, inputText.trim(), pendingImage || undefined);
+      setInputText("");
+      setPendingImage(null);
+    } catch (err) {
+      // error in context
+    }
+  };
+
+  const handleEmojiClick = (emojiData) => {
+    const emoji = emojiData?.emoji || "";
+    if (!emoji) return;
+    const ta = textareaRef.current;
+    if (ta) {
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const newText = inputText.slice(0, start) + emoji + inputText.slice(end);
+      setInputText(newText);
+      setTimeout(() => ta.focus(), 0);
+    } else {
+      setInputText((prev) => prev + emoji);
+    }
+    setShowEmojiPicker(false);
+  };
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      if (typeof dataUrl === "string" && dataUrl.length < 5 * 1024 * 1024) setPendingImage(dataUrl);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const getOtherParticipant = () => {
+    if (!activeChat?.participants?.length || !user?._id) return { _id: null, name: "Unknown", profileImage: null };
+    const other = activeChat.participants.find((p) => p._id !== user._id);
+    return other ? { _id: other._id, name: other.name || other.email, profileImage: other.profileImage } : { _id: null, name: "Unknown", profileImage: null };
+  };
+
+  if (!activeChatId) {
+    return (
+      <div className="global-bg-color w-full box-shadow rounded-2xl h-full flex flex-col items-center justify-center font-vivita text-gray-500">
+        <p className="text-lg">Select a chat or start a new one</p>
+      </div>
+    );
+  }
+
+  const other = getOtherParticipant();
+  const isOtherOnline = isUserOnline(other._id);
+  const canSend = (inputText.trim() || pendingImage) && !sending;
+
   return (
-    <div className="global-bg-color w-full box-shadow rounded-2xl h-full flex-col font-vivita overflow-hidden">
-      <div className="flex items-center justify-between border-b-[1px] p-3 xl:p-6 border-[#C5DCEB] last:border-0 pb-2 mb-3">
+    <div className="global-bg-color w-full box-shadow rounded-2xl h-full flex flex-col font-vivita overflow-hidden">
+      <div className="flex items-center justify-between border-b-[1px] p-3 xl:p-6 border-[#C5DCEB] pb-2 mb-3 shrink-0">
         <div className="flex items-center gap-2 md:gap-4">
-          <img
-            src={profilePic}
-            alt="User"
-            className="w-12 h-12 xl:w-20 xl:h-20 rounded-full"
-          />
-          <div className="flex flex-col">
-            <div className="text-xs xl:text-base">Brume Djbah</div>
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="md:hidden p-2 -ml-2 rounded-lg hover:bg-black/5"
+              aria-label="Back to chats"
+            >
+              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+          <div className="w-12 h-12 xl:w-20 xl:h-20 shrink-0 aspect-square rounded-full overflow-hidden bg-gray-200">
+            <img
+              src={other.profileImage || profilePic}
+              alt={other.name}
+              className="w-full h-full object-cover object-center"
+            />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <div className="text-xs xl:text-base font-medium">{other.name}</div>
             <div className="flex items-center p-0 space-x-1 text-xs md:text-sm">
-              <span className="text-[#86efac] text-lg md:text-xl">•</span>
-              <span className="text-gray-500 text-[10px] md:text-xs">
-                Active now
+              <span className={`text-lg md:text-xl ${isOtherOnline ? "text-[#86efac]" : "text-gray-400"}`}>•</span>
+              <span className={`text-[10px] md:text-xs ${isOtherOnline ? "text-[#0060A9]" : "text-gray-500"}`}>
+                {isOtherOnline ? "Active now" : "Inactive"}
               </span>
             </div>
           </div>
         </div>
-        <div className="mr-3 md:mr-5 text-xs md:text-base">Ticket # 124546</div>
       </div>
-      <div className="overflow-auto h-[45vh]">
+
+      {error && (
+        <div className="mx-3 p-2 rounded bg-red-100 text-red-700 text-sm shrink-0">{error}</div>
+      )}
+
+      <div className="overflow-auto flex-1 min-h-0">
         <div className="flex items-center gap-x-2 md:gap-x-10 justify-center my-2">
           <hr className="w-24 md:w-60 border-[#0060A9]" />
           <span className="text-gray-400 text-[10px] md:text-xs">
-            28 Feb,2025
+            {messages.length ? formatMessageTime(messages[0]?.createdAt) : "No messages yet"}
           </span>
           <hr className="w-24 md:w-60 border-[#0060A9]" />
         </div>
         <div className="border-b-[1px] border-[#C5DCEB] last:border-0 p-3 md:p-6">
-          {messages.map((msg, idx) => (
-            <div key={idx} className="flex pb-2 md:pb-3">
-              <img
-                src={profilePic}
-                alt={msg.sender}
-                className="w-8 h-8 xl:w-14 xl:h-14 rounded-full"
-              />
-              <div className="rounded-xl px-3 xl:px-5 py-1">
-                <div
-                  className={`text-sm xl:text-base mb-1 ${
-                    msg.sender === "Ifeoma" ? "text-[#0060A9]" : ""
-                  }`}
-                >
-                  {msg.sender}
-                  <span className="text-[10px] xl:text-xs text-gray-400 ml-2">
-                    <span className="text-sm align-middle text-[#86efac]">
-                      •
-                    </span>
-                    {msg.time}
-                  </span>
+          {loadingMessages ? (
+            <div className="py-8 text-center text-gray-500">Loading messages...</div>
+          ) : messages.length === 0 ? (
+            <div className="py-8 text-center text-gray-500">No messages yet. Say hello!</div>
+          ) : (
+            messages.map((msg) => {
+              const isSelf = msg.sender?._id === user?._id || msg.sender === user?._id;
+              const senderName = msg.senderName || msg.sender?.name || (isSelf ? "You" : "Unknown");
+              const senderAvatar = isSelf ? (user?.profileImage || profilePic) : (msg.sender?.profileImage || profilePic);
+              return (
+                <div key={msg._id} className="flex pb-2 md:pb-3">
+                  <div className="w-8 h-8 xl:w-14 xl:h-14 shrink-0 aspect-square rounded-full overflow-hidden bg-gray-200">
+                    <img
+                      src={senderAvatar}
+                      alt={senderName}
+                      className="w-full h-full object-cover object-center"
+                    />
+                  </div>
+                  <div className="rounded-xl px-3 xl:px-5 py-1 min-w-0">
+                    <div
+                      className={`text-sm xl:text-base mb-1 ${isSelf ? "text-[#0060A9]" : ""}`}
+                    >
+                      {senderName}
+                      <span className="text-[10px] xl:text-xs text-gray-400 ml-2">
+                        <span className="text-sm align-middle text-[#86efac]">•</span>{" "}
+                        {formatMessageTime(msg.createdAt)}
+                      </span>
+                    </div>
+                    {msg.image && (
+                      <div className="mb-1 inline-block max-w-[200px] xl:max-w-[280px] rounded-lg border border-gray-200 overflow-hidden bg-gray-50">
+                        <img
+                          src={msg.image}
+                          alt="Sent"
+                          className="block max-w-full w-full h-auto align-top"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
+                    {msg.text && msg.text !== "[Image]" && (
+                      <div className="text-gray-600 text-xs xl:text-base break-words">{msg.text}</div>
+                    )}
+                  </div>
                 </div>
-                <div className="text-gray-400 text-xs xl:text-base">
-                  {msg.text}dwd
-                </div>
-              </div>
-            </div>
-          ))}
+              );
+            })
+          )}
+          <div ref={messagesEndRef} />
         </div>
       </div>
-      <div className="p-3 md:p-6">
+
+      <form onSubmit={handleSend} className="p-3 md:p-6 shrink-0">
+        {pendingImage && (
+          <div className="mb-2 relative inline-block max-w-[200px] rounded-lg border border-[#AFCDE2] overflow-hidden bg-gray-50">
+            <img
+              src={pendingImage}
+              alt="Preview"
+              className="block max-w-full max-h-24 w-full h-auto object-contain object-top"
+            />
+            <button
+              type="button"
+              onClick={() => setPendingImage(null)}
+              className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 text-white text-sm leading-none"
+              aria-label="Remove image"
+            >
+              ×
+            </button>
+          </div>
+        )}
         <textarea
+          ref={textareaRef}
           id="message"
           name="message"
-          rows="3"
-          cols="50"
-          className="border border-[#AFCDE2] rounded-xl p-3 w-full text-xs md:text-[14px] text-[#9AC0DC]"
-        >
-          Enter your text here...
-        </textarea>
-        <div className="flex">
-          <div className="flex py-3 md:py-5 justify-between items-center w-full">
-            <div className="flex gap-2">
-              <img src={gallaryIcon} width={24} height={24} />
-              <img src={emogiIcon} width={24} height={24} />
-            </div>
-            <div className="flex w-32 md:w-40">
-              <button className="custom-shadow-button">Send</button>
-            </div>
+          rows="2"
+          placeholder="Enter your text here..."
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+          className="border border-[#AFCDE2] rounded-xl p-3 w-full text-xs md:text-[14px] placeholder-[#9AC0DC] resize-none focus:outline-none focus:ring-2 focus:ring-[#0060A9]/30"
+          disabled={sending}
+        />
+        <div className="flex py-3 md:py-5 justify-between items-center w-full relative">
+          <div className="flex gap-2 items-center">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageSelect}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-1 rounded hover:bg-black/5"
+              aria-label="Attach image"
+            >
+              <img src={gallaryIcon} width={24} height={24} alt="" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker((p) => !p)}
+              className="p-1 rounded hover:bg-black/5"
+              aria-label="Insert emoji"
+            >
+              <img src={emogiIcon} width={24} height={24} alt="" />
+            </button>
+            {showEmojiPicker && (
+              <div ref={emojiPickerRef} className="absolute bottom-full left-0 mb-1 z-20">
+                <EmojiPicker
+                  onEmojiClick={handleEmojiClick}
+                  width={320}
+                  height={360}
+                  theme="light"
+                  previewConfig={{ showPreview: false }}
+                />
+              </div>
+            )}
           </div>
+          <button
+            type="submit"
+            className="custom-shadow-button min-w-[100px]"
+            disabled={!canSend}
+          >
+            {sending ? "Sending…" : "Send"}
+          </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 };

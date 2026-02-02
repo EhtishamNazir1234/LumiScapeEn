@@ -1,4 +1,6 @@
 import Login from "./dashboardScreens/auth/Login.jsx";
+import ForgotPassword from "./dashboardScreens/auth/ForgotPassword.jsx";
+import ResetPassword from "./dashboardScreens/auth/ResetPassword.jsx";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginVerification from "./dashboardScreens/auth/Login-verification.jsx";
 import Layout from "./dashboardScreens/layout/Layout.jsx";
@@ -26,6 +28,7 @@ import GenerateNewReports from "./dashboardScreens/enterpriseDashboard/reports/G
 import HelpCenter from "./dashboardScreens/enterpriseDashboard/helpCenter/Index.jsx";
 import EnterpriseDashboard from "./dashboardScreens/enterpriseDashboard/dashboard/Index.jsx";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getRoleBasedRoute } from "./utils/roleRouting";
 
@@ -67,6 +70,8 @@ function AppRoutes() {
         } 
       />
       <Route path="/login-verification" element={<LoginVerification />} />
+      <Route path="/forgot-password" element={isAuthenticated ? <Navigate to={getRoleBasedRoute(user?.role)} replace /> : <ForgotPassword />} />
+      <Route path="/reset-password" element={isAuthenticated ? <Navigate to={getRoleBasedRoute(user?.role)} replace /> : <ResetPassword />} />
       <Route
         element={
           <ProtectedRoute>
@@ -192,7 +197,9 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <AppRoutes />
+        <NotificationProvider>
+          <AppRoutes />
+        </NotificationProvider>
       </BrowserRouter>
     </AuthProvider>
   );

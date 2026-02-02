@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.model.js';
 import { generateToken } from '../utils/generateToken.js';
@@ -175,10 +176,10 @@ router.post('/change-password', protect, [
   }
 });
 
-// @route   POST /api/auth/reset-password
-// @desc    Request password reset
+// @route   POST /api/auth/forgot-password
+// @desc    Request password reset – sends reset token (in dev, link is in response)
 // @access  Public
-router.post('/reset-password', [
+router.post('/forgot-password', [
   body('email').isEmail().withMessage('Please provide a valid email')
 ], async (req, res) => {
   try {
@@ -188,18 +189,69 @@ router.post('/reset-password', [
     }
 
     const { email } = req.body;
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select('+resetPasswordToken +resetPasswordExpires');
 
     if (!user) {
-      // Don't reveal if user exists for security
-      return res.json({ message: 'If an account exists, a password reset email has been sent' });
+      return res.json({ message: 'If an account exists with this email, a password reset link has been sent.' });
     }
 
-    // In production, send reset email here
-    // For now, just return success
-    res.json({ message: 'Password reset email sent (if account exists)' });
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+    await user.save({ validateBeforeSave: false });
+
+    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    // TODO: In production, send email with resetUrl (e.g. nodemailer)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Password reset link:', resetUrl);
+    }
+
+    res.json({
+      message: 'If an account exists with this email, a password reset link has been sent.',
+      ...(process.env.NODE_ENV !== 'production' && { resetUrl })
+    });
   } catch (error) {
-    console.error('Reset password error:', error);
+    console.error('Forgot password error:', error);
+    if (user) {
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save({ validateBeforeSave: false }).catch(() => {});
+    }
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/auth/reset-password
+// @desc    Set new password using token from email link
+// @access  Public
+router.post('/reset-password', [
+  body('token').notEmpty().withMessage('Reset token is required'),
+  body('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { token, newPassword } = req.body;
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    }).select('+password +resetPasswordToken +resetPasswordExpires');
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired reset link. Please request a new one.' });
+    }
+
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.json({ message: 'Password has been reset. You can now log in with your new password.' });
+  } catch (error) {
+    console.error('Set new password error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

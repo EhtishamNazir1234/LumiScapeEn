@@ -1,9 +1,13 @@
+import http from 'http';
 import express from 'express';
+import { Server as SocketServer } from 'socket.io';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import jwt from 'jsonwebtoken';
+import User from './models/User.model.js';
 
 // Import routes
 import authRoutes from './routes/auth.routes.js';
@@ -71,9 +75,58 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
+const server = http.createServer(app);
 
-app.listen(PORT, () => {
+// Socket.io for realtime chat
+const io = new SocketServer(server, {
+  cors: { origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }
+});
+app.set('io', io);
+
+io.use(async (socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (!token) return next(new Error('Authentication required'));
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret_key_change_in_production');
+    const user = await User.findById(decoded.id).select('_id name email');
+    if (!user) return next(new Error('User not found'));
+    socket.userId = user._id.toString();
+    socket.user = user;
+    next();
+  } catch (err) {
+    next(new Error('Invalid token'));
+  }
+});
+
+// Track online users for presence (active/inactive)
+const onlineUserIds = new Set();
+
+io.on('connection', (socket) => {
+  const userId = socket.userId;
+  if (userId) {
+    onlineUserIds.add(userId);
+    socket.broadcast.emit('user_online', { userId });
+    socket.emit('online_users', Array.from(onlineUserIds));
+  }
+
+  socket.on('join_chat', (chatId) => {
+    socket.join(`chat:${chatId}`);
+  });
+  socket.on('leave_chat', (chatId) => {
+    socket.leave(`chat:${chatId}`);
+  });
+
+  socket.on('disconnect', () => {
+    if (userId) {
+      onlineUserIds.delete(userId);
+      socket.broadcast.emit('user_offline', { userId });
+    }
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
 export default app;
+export { io };

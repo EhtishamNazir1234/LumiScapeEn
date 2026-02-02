@@ -16,12 +16,12 @@ async function createAdminUser() {
   try {
     // Connect to MongoDB
     await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
+    console.log('Connected to MongoDB');
 
     // Check if admin already exists
     const existingAdmin = await User.findOne({ email: 'admin@lumiscape.com' });
     if (existingAdmin) {
-      console.log('⚠️  Admin user already exists!');
+      console.log(' Admin user already exists!');
       console.log('   Email: admin@lumiscape.com');
       console.log('   You can login with this account or create a new one.');
       process.exit(0);
@@ -38,16 +38,16 @@ async function createAdminUser() {
       country: 'Not assigned'
     });
 
-    console.log('✅ Admin user created successfully!');
-    console.log('\n📋 Login Credentials:');
+    console.log(' Admin user created successfully!');
+    console.log('Login Credentials:');
     console.log('   Email: admin@lumiscape.com');
     console.log('   Password: admin123');
     console.log('   Role: super-admin');
-    console.log('\n⚠️  Please change the password after first login!');
+    console.log(' Please change the password after first login!');
     
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error creating admin user:', error.message);
+    console.error(' Error creating admin user:', error.message);
     process.exit(1);
   }
 }

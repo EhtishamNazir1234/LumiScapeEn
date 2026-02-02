@@ -8,7 +8,8 @@ const AssignTicketModal = ({
   title,
   buttontext,
   listData,
-  onBack
+  onBack,
+  onAssign
 }) => {
   const [checkedUsers, setCheckedUsers] = useState({});
 
@@ -19,6 +20,11 @@ const AssignTicketModal = ({
       ...prev,
       [id]: !prev[id]
     }));
+  };
+
+  const selectedIds = Object.keys(checkedUsers).filter((id) => checkedUsers[id]);
+  const handleAssign = () => {
+    if (onAssign) onAssign(selectedIds);
   };
 
   return (
@@ -41,18 +47,20 @@ const AssignTicketModal = ({
             />
           </div>
           <h1 className="font-medium md:text-[26px] text-[20px] font-vivita">{title}</h1>
-          <div className="md:space-y-4 md:my-8 md:h-[300px] h-[250px]">
+          <div className="md:space-y-4 md:my-8 md:h-[300px] h-[250px] overflow-y-auto min-h-0 rounded-lg border border-gray-100 p-1">
             {listData.map((admin) => (
               <div
                 key={admin.id}
                 className="flex items-center justify-between p-2 rounded-lg"
               >
                 <div className="flex items-center gap-4">
-                  <img
-                    src={admin.avatar}
-                    alt={admin.name}
-                    className="w-10 h-10 rounded-full"
-                  />
+                  <div className="w-10 h-10 shrink-0 aspect-square rounded-full overflow-hidden bg-gray-100">
+                    <img
+                      src={admin.avatar}
+                      alt={admin.name}
+                      className="w-full h-full object-cover object-center"
+                    />
+                  </div>
                   <span className="text-[#0060A9] font-vivita">
                     {admin.name}
                   </span>
@@ -76,7 +84,7 @@ const AssignTicketModal = ({
               </button>
             </div>
             <div className="md:w-[30%] w-full">
-              <button className="custom-shadow-button !py-3">
+              <button className="custom-shadow-button !py-3" onClick={handleAssign} disabled={selectedIds.length === 0}>
                 {buttontext}
               </button>
             </div>
