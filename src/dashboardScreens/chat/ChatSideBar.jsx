@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import profilePic from "../../assets/profile.svg";
 import { truncateText } from "../../hepers";
 import UserListModal from "../../common/UserListModal";
-import { useChat } from "../../context/ChatContext";
-import { useAuth } from "../../context/AuthContext";
+import { useChat } from "../../store/hooks";
+import { useAuth } from "../../store/hooks";
 
 const formatChatTime = (dateStr) => {
   if (!dateStr) return "";
@@ -21,7 +21,7 @@ const ChatSideBar = () => {
   const {
     chats,
     activeChatId,
-    setActiveChatId,
+    selectChat,
     createChat,
     loadAvailableUsers,
     availableUsers,
@@ -40,15 +40,14 @@ const ChatSideBar = () => {
   const handleAssign = async (selectedIds) => {
     if (!selectedIds?.length) return;
     try {
-      const newChat = await createChat(selectedIds[0]);
-      setActiveChatId(newChat._id);
+      await createChat(selectedIds[0]);
       handleCloseModal();
     } catch (err) {
-      // error already set in context
+      // error already set in store
     }
   };
 
-  const handleChatClick = (id) => setActiveChatId(id);
+  const handleChatClick = (id) => selectChat(id);
 
   const getOtherParticipant = (chat) => {
     if (!chat.participants?.length || !user?._id) return { _id: null, name: "Unknown", profileImage: null };

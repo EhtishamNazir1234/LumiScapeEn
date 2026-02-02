@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import loginImage from "../../assets/login.png";
 import InputField from "../../common/InputField";
 import Logo from "../../assets/logo.svg";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../store/hooks";
 import { getRoleBasedRoute } from "../../utils/roleRouting";
 
 const Login = () => {

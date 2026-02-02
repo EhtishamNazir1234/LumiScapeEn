@@ -4,19 +4,21 @@ import chatIcon from "../../assets/chatIcon.svg";
 import notification from "../../assets/notification.svg";
 import profileImage from "../../assets/profile.svg";
 import Notifications from "../../common/Notifications";
-import { useAuth } from "../../context/AuthContext";
-import { useNotifications } from "../../context/NotificationContext";
-import { useChat } from "../../context/ChatContext";
+import { useAuth } from "../../store/hooks";
+import { useNotifications } from "../../store/hooks";
+import { useChat } from "../../store/hooks";
 
 const NavBar = () => {
   const { user } = useAuth();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, markAllAsRead } = useNotifications();
   const { totalUnreadChatMessages } = useChat();
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
   const profileRef = useRef(null);
   const toggleNotifications = () => {
-    setShowNotifications(!showNotifications);
+    const next = !showNotifications;
+    setShowNotifications(next);
+    if (next) markAllAsRead();
   };
 
   useEffect(() => {

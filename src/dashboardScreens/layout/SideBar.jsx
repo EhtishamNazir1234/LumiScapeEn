@@ -20,8 +20,10 @@ import {
 import colorLogo from "../../assets/colorLogo.svg";
 import LogoIcon from "../../assets/logoIcon.svg";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { useChat } from "../../context/ChatContext";
+import { useDispatch } from "react-redux";
+import { useAuth } from "../../store/hooks";
+import { useChat } from "../../store/hooks";
+import { chatActions } from "../../store/slices/chatSlice";
 
 const menuItems = [
   {
@@ -132,6 +134,7 @@ const menuItems = [
 ];
 
 const Sidebar = ({}) => {
+  const dispatch = useDispatch();
   const { user, logout } = useAuth();
   const { totalUnreadChatMessages } = useChat();
   const location = useLocation();
@@ -222,6 +225,7 @@ const Sidebar = ({}) => {
                 key={key}
                 onClick={() => {
                   if (key === "logout") {
+                    dispatch(chatActions.resetChatState());
                     logout();
                     navigate("/login", { replace: true });
                   } else if (path) {

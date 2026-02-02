@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import InputField from "../../common/InputField";
 import ImageUploader from "../../common/ImageUploader";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../store/hooks";
 
 const splitName = (name) => {
   if (!name || typeof name !== "string") return { first: "", last: "" };

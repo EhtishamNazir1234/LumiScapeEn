@@ -27,11 +27,11 @@ import Reports from "./dashboardScreens/enterpriseDashboard/reports/Index.jsx";
 import GenerateNewReports from "./dashboardScreens/enterpriseDashboard/reports/GenerateReport.jsx";
 import HelpCenter from "./dashboardScreens/enterpriseDashboard/helpCenter/Index.jsx";
 import EnterpriseDashboard from "./dashboardScreens/enterpriseDashboard/dashboard/Index.jsx";
-import { AuthProvider, useAuth } from "./context/AuthContext";
-import { NotificationProvider } from "./context/NotificationContext";
-import { ChatProvider } from "./context/ChatContext";
+import { useAuth } from "./store/hooks";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getRoleBasedRoute } from "./utils/roleRouting";
+import AuthInit from "./components/AuthInit";
+import ChatSocketListener from "./components/ChatSocketListener";
 
 // Component to handle role-based dashboard routing
 const RoleBasedDashboard = () => {
@@ -196,15 +196,12 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
+    <AuthInit>
       <BrowserRouter>
-        <NotificationProvider>
-          <ChatProvider>
-            <AppRoutes />
-          </ChatProvider>
-        </NotificationProvider>
+        <ChatSocketListener />
+        <AppRoutes />
       </BrowserRouter>
-    </AuthProvider>
+    </AuthInit>
   );
 }
 

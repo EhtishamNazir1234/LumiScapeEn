@@ -12,7 +12,7 @@ import { alerts } from "../../../dummyData";
 import { LineChartData } from "../../../dummyData";
 import CustomcDropdown from "../../common/custom-dropdown";
 import  TIME_OPTIONS   from "../../constant";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../store/hooks";
 
 const userData = {
   basic: 308,

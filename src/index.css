@@ -60,6 +60,11 @@
 .font-vivita {
   font-family: 'VIVITA', sans-serif;
 }
+
+/* Chat: keep app font but use native color emoji so emojis match the picker */
+.chat-emoji-safe {
+  font-family: 'VIVITA', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+}
 .font-Geom {
   font-family: 'XXII Geom Slab DEMO'
 }

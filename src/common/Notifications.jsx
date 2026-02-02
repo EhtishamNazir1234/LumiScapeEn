@@ -1,7 +1,7 @@
 import React from "react";
 import { IoSettingsOutline } from "react-icons/io5";
 import { NotificationIcon } from "../assets/icon";
-import { useNotifications } from "../context/NotificationContext";
+import { useNotifications } from "../store/hooks";
 
 const Notifications = () => {
   const { notifications, markAsRead, markAllAsRead } = useNotifications();

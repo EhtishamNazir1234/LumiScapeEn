@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import profilePic from "../../assets/profile.svg";
 import emogiIcon from "../../assets/emogiIcon.svg";
 import gallaryIcon from "../../assets/gallaryIcon.svg";
-import { useChat } from "../../context/ChatContext";
-import { useAuth } from "../../context/AuthContext";
+import { useChat } from "../../store/hooks";
+import { useAuth } from "../../store/hooks";
 import EmojiPicker from "emoji-picker-react";
 
 const formatMessageTime = (dateStr) => {
@@ -190,7 +190,7 @@ const ChatDetails = ({ onBack }) => {
                       </div>
                     )}
                     {msg.text && msg.text !== "[Image]" && (
-                      <div className="text-gray-600 text-xs xl:text-base break-words">{msg.text}</div>
+                      <div className="chat-emoji-safe text-gray-600 text-xs xl:text-base break-words">{msg.text}</div>
                     )}
                   </div>
                 </div>
@@ -233,7 +233,7 @@ const ChatDetails = ({ onBack }) => {
               handleSend();
             }
           }}
-          className="border border-[#AFCDE2] rounded-xl p-3 w-full text-xs md:text-[14px] placeholder-[#9AC0DC] resize-none focus:outline-none focus:ring-2 focus:ring-[#0060A9]/30"
+          className="chat-emoji-safe border border-[#AFCDE2] rounded-xl p-3 w-full text-xs md:text-[14px] placeholder-[#9AC0DC] resize-none focus:outline-none focus:ring-2 focus:ring-[#0060A9]/30"
           disabled={sending}
         />
         <div className="flex py-3 md:py-5 justify-between items-center w-full relative">
