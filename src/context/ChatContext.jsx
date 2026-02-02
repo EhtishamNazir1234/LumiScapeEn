@@ -27,8 +27,10 @@ export const ChatProvider = ({ children }) => {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [onlineUserIds, setOnlineUserIds] = useState({});
+  const [unreadByChatId, setUnreadByChatId] = useState({});
 
   const isUserOnline = useCallback((userId) => !!onlineUserIds[userId], [onlineUserIds]);
+  const totalUnreadChatMessages = Object.values(unreadByChatId).reduce((sum, n) => sum + n, 0);
 
   const activeChat = chats.find((c) => c._id === activeChatId);
 
@@ -79,13 +81,16 @@ export const ChatProvider = ({ children }) => {
     setError(null);
     try {
       const newChat = await chatService.createChat(participantId);
-      await loadChats();
+      setChats((prev) =>
+        prev.some((c) => c._id === newChat._id) ? prev : [newChat, ...prev]
+      );
+      setActiveChatId(newChat._id);
       return newChat;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create chat');
       throw err;
     }
-  }, [loadChats]);
+  }, []);
 
   const sendMessage = useCallback(async (chatId, text, image = null) => {
     if (!text?.trim() && !image) return;
@@ -155,6 +160,10 @@ export const ChatProvider = ({ children }) => {
         setMessages((prev) => [...prev, message]);
       }
       if (!isFromMe && message.chatId !== activeChatId) {
+        setUnreadByChatId((prev) => ({
+          ...prev,
+          [message.chatId]: (prev[message.chatId] || 0) + 1,
+        }));
         const senderName = message.senderName || message.sender?.name || 'Someone';
         addNotification({
           label: 'New message',
@@ -187,10 +196,14 @@ export const ChatProvider = ({ children }) => {
     };
   }, [socket, activeChatId]);
 
-  // Load messages when active chat changes
+  // Load messages when active chat changes; clear unread for that chat
   useEffect(() => {
-    if (activeChatId) loadMessages(activeChatId);
-    else setMessages([]);
+    if (activeChatId) {
+      loadMessages(activeChatId);
+      setUnreadByChatId((prev) => ({ ...prev, [activeChatId]: 0 }));
+    } else {
+      setMessages([]);
+    }
   }, [activeChatId, loadMessages]);
 
   const value = {
@@ -213,6 +226,7 @@ export const ChatProvider = ({ children }) => {
     error,
     setError,
     isUserOnline,
+    totalUnreadChatMessages,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

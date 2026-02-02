@@ -29,6 +29,7 @@ import HelpCenter from "./dashboardScreens/enterpriseDashboard/helpCenter/Index.
 import EnterpriseDashboard from "./dashboardScreens/enterpriseDashboard/dashboard/Index.jsx";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { ChatProvider } from "./context/ChatContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getRoleBasedRoute } from "./utils/roleRouting";
 
@@ -198,7 +199,9 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <NotificationProvider>
-          <AppRoutes />
+          <ChatProvider>
+            <AppRoutes />
+          </ChatProvider>
         </NotificationProvider>
       </BrowserRouter>
     </AuthProvider>

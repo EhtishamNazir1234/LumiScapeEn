@@ -1,14 +1,15 @@
 import React, { useEffect } from "react";
-import { ChatProvider, useChat } from "../../context/ChatContext";
+import { useChat } from "../../context/ChatContext";
 import ChatSideBar from "./ChatSideBar";
 import ChatDetails from "./ChatDetail";
 
-const ChatContent = () => {
-  const { activeChatId, setActiveChatId, loadChats } = useChat();
+const Chat = () => {
+  const { activeChatId, setActiveChatId, loadChats, chats } = useChat();
 
+  // Load chats only when list is empty so switching tabs doesn't refetch
   useEffect(() => {
-    loadChats();
-  }, [loadChats]);
+    if (chats.length === 0) loadChats();
+  }, [chats.length, loadChats]);
 
   return (
     <div className="w-full h-[calc(100%-20px)]">
@@ -24,14 +25,6 @@ const ChatContent = () => {
         )}
       </div>
     </div>
-  );
-};
-
-const Chat = () => {
-  return (
-    <ChatProvider>
-      <ChatContent />
-    </ChatProvider>
   );
 };
 

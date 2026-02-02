@@ -21,6 +21,7 @@ import colorLogo from "../../assets/colorLogo.svg";
 import LogoIcon from "../../assets/logoIcon.svg";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useChat } from "../../context/ChatContext";
 
 const menuItems = [
   {
@@ -132,6 +133,7 @@ const menuItems = [
 
 const Sidebar = ({}) => {
   const { user, logout } = useAuth();
+  const { totalUnreadChatMessages } = useChat();
   const location = useLocation();
   const [isExpandSideBar, setIsExpandSideBar] = useState(
     window.innerWidth > 1024
@@ -238,7 +240,14 @@ const Sidebar = ({}) => {
                     : ""
                 } ${isBottomItem ? "mt-auto" : ""} ${isLogoutRightAfterSettings ? "!mt-0" : ""}`}
               >
-                <Icon fill={isActive ? "#fff" : "#000"} className="w-6 h-6" />
+                <span className="relative inline-flex">
+                  <Icon fill={isActive ? "#fff" : "#000"} className="w-6 h-6" />
+                  {key === "chat" && totalUnreadChatMessages > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-medium px-1">
+                      {totalUnreadChatMessages > 99 ? "99+" : totalUnreadChatMessages}
+                    </span>
+                  )}
+                </span>
                 {isExpandSideBar && (
                   <span className="font-light lg:text-base text-[14px]">
                     {label}
