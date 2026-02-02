@@ -143,10 +143,14 @@ router.post('/:chatId/messages', [
     const populatedMessage = await Message.findById(message._id)
       .populate('sender', 'name email userId profileImage');
 
-    // Realtime: emit to all participants in this chat
+    // Realtime: emit to all participants in this chat (normalize chatId as string for client)
     const io = req.app.get('io');
     if (io) {
-      io.to(`chat:${req.params.chatId}`).emit('new_message', populatedMessage);
+      const chatIdStr = String(req.params.chatId);
+      const payload = populatedMessage.toObject ? populatedMessage.toObject() : populatedMessage;
+      payload.chatId = chatIdStr;
+      if (payload.sender && payload.sender._id) payload.sender._id = String(payload.sender._id);
+      io.to(`chat:${chatIdStr}`).emit('new_message', payload);
     }
     
     res.status(201).json(populatedMessage);

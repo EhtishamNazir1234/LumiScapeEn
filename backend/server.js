@@ -110,10 +110,11 @@ io.on('connection', (socket) => {
   }
 
   socket.on('join_chat', (chatId) => {
-    socket.join(`chat:${chatId}`);
+    const room = `chat:${String(chatId)}`;
+    socket.join(room);
   });
   socket.on('leave_chat', (chatId) => {
-    socket.leave(`chat:${chatId}`);
+    socket.leave(`chat:${String(chatId)}`);
   });
 
   socket.on('disconnect', () => {

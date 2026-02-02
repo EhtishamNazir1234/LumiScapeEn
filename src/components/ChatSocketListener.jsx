@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useStore } from 'react-redux';
+import { useStore, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import { getSocketUrl } from '../services/chat.service';
 import { chatActions } from '../store/slices/chatSlice';
@@ -7,12 +7,13 @@ import { addNotification } from '../store/slices/notificationSlice';
 
 export default function ChatSocketListener() {
   const store = useStore();
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const user = useSelector((state) => state.auth.user);
   const socketRef = useRef(null);
   const prevActiveChatIdRef = useRef(null);
 
+  // Connect socket when user is authenticated; re-run when auth becomes ready
   useEffect(() => {
-    const state = store.getState();
-    const { user, isAuthenticated } = state.auth;
     if (!isAuthenticated || !user) return;
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -26,11 +27,12 @@ export default function ChatSocketListener() {
     prevActiveChatIdRef.current = null;
 
     socket.on('connect', () => {
-      const activeChatId = store.getState().chat.activeChatId;
-      if (activeChatId) {
-        socket.emit('join_chat', activeChatId);
-        prevActiveChatIdRef.current = activeChatId;
-      }
+      const { chats, activeChatId } = store.getState().chat;
+      // Join all chat rooms so we receive new messages for every chat (not only the active one)
+      (chats || []).forEach((c) => {
+        if (c._id) socket.emit('join_chat', String(c._id));
+      });
+      if (activeChatId) prevActiveChatIdRef.current = activeChatId;
     });
 
     socket.on('online_users', (userIds) => {
@@ -52,16 +54,17 @@ export default function ChatSocketListener() {
 
     socket.on('new_message', (message) => {
       const state = store.getState();
-      const { user } = state.auth;
-      const { activeChatId, chats } = state.chat;
-      const isFromMe =
-        message.sender?._id === user._id || message.sender === user._id;
+      const { user: currentUser } = state.auth;
+      const { activeChatId } = state.chat;
+      const chatId = message.chatId ? String(message.chatId) : message.chatId;
+      const senderId = message.sender?._id ?? message.sender;
+      const isFromMe = currentUser && (senderId === currentUser._id || String(senderId) === String(currentUser._id));
 
       if (!isFromMe) {
-        store.dispatch(chatActions.appendMessage({ chatId: message.chatId, message }));
+        store.dispatch(chatActions.appendMessage({ chatId, message }));
       }
-      if (!isFromMe && message.chatId !== activeChatId) {
-        store.dispatch(chatActions.incrementUnreadForChat(message.chatId));
+      if (!isFromMe && chatId !== activeChatId) {
+        store.dispatch(chatActions.incrementUnreadForChat(chatId));
         const senderName =
           message.senderName || message.sender?.name || 'Someone';
         store.dispatch(
@@ -74,7 +77,7 @@ export default function ChatSocketListener() {
       }
       store.dispatch(
         chatActions.updateChatLastMessage({
-          chatId: message.chatId,
+          chatId,
           text: message.text,
           createdAt: message.createdAt,
         })
@@ -85,27 +88,42 @@ export default function ChatSocketListener() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [store]);
+  }, [store, isAuthenticated, user?._id]);
 
+  // Join all chat rooms when chats load/update; sync activeChatId for leave/join
   useEffect(() => {
+    if (!socketRef.current) return;
+    const joinedChatIdsRef = { current: new Set() };
     const unsubscribe = store.subscribe(() => {
       const socket = socketRef.current;
-      if (!socket) return;
-      const activeChatId = store.getState().chat.activeChatId;
+      if (!socket || !socket.connected) return;
+      const { chats, activeChatId } = store.getState().chat;
+      const chatIds = (chats || []).map((c) => (c._id ? String(c._id) : null)).filter(Boolean);
+      chatIds.forEach((id) => {
+        if (!joinedChatIdsRef.current.has(id)) {
+          socket.emit('join_chat', id);
+          joinedChatIdsRef.current.add(id);
+        }
+      });
       const prev = prevActiveChatIdRef.current;
       if (prev !== activeChatId) {
-        if (prev) socket.emit('leave_chat', prev);
-        if (activeChatId) socket.emit('join_chat', activeChatId);
         prevActiveChatIdRef.current = activeChatId;
       }
     });
-    const activeChatId = store.getState().chat.activeChatId;
-    if (activeChatId && socketRef.current) {
-      socketRef.current.emit('join_chat', activeChatId);
-      prevActiveChatIdRef.current = activeChatId;
+    const { chats, activeChatId } = store.getState().chat;
+    const socket = socketRef.current;
+    if (socket?.connected) {
+      (chats || []).forEach((c) => {
+        if (c._id) {
+          const id = String(c._id);
+          socket.emit('join_chat', id);
+          joinedChatIdsRef.current.add(id);
+        }
+      });
+      if (activeChatId) prevActiveChatIdRef.current = activeChatId;
     }
     return unsubscribe;
-  }, [store]);
+  }, [store, isAuthenticated]);
 
   return null;
 }

@@ -19,7 +19,7 @@ const formatMessageTime = (dateStr) => {
 
 const ChatDetails = ({ onBack }) => {
   const { user } = useAuth();
-  const { activeChatId, activeChat, messages, sendMessage, loadingMessages, sending, error, isUserOnline } = useChat();
+  const { activeChatId, activeChat, messages, sendMessage, addOptimisticMessage, loadingMessages, sending, error, isUserOnline } = useChat();
   const [inputText, setInputText] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [pendingImage, setPendingImage] = useState(null);
@@ -48,12 +48,27 @@ const ChatDetails = ({ onBack }) => {
   const handleSend = async (e) => {
     e?.preventDefault();
     if ((!inputText.trim() && !pendingImage) || !activeChatId || sending) return;
+    const text = inputText.trim();
+    const image = pendingImage || undefined;
+    const tempId = `opt-${Date.now()}`;
+    addOptimisticMessage({
+      chatId: activeChatId,
+      message: {
+        _id: tempId,
+        text: text || (image ? "[Image]" : ""),
+        image: image || undefined,
+        sender: user,
+        senderName: user?.name,
+        createdAt: new Date().toISOString(),
+      },
+    });
+    setInputText("");
+    setPendingImage(null);
+    setTimeout(() => textareaRef.current?.focus(), 0);
     try {
-      await sendMessage(activeChatId, inputText.trim(), pendingImage || undefined);
-      setInputText("");
-      setPendingImage(null);
+      await sendMessage(activeChatId, text, image, tempId);
     } catch (err) {
-      // error in context
+      // error already in store; optimistic message removed by reducer
     }
   };
 
@@ -226,6 +241,7 @@ const ChatDetails = ({ onBack }) => {
           rows="2"
           placeholder="Enter your text here..."
           value={inputText}
+          autoFocus
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {

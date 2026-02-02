@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import profilePic from "../../assets/profile.svg";
-import { truncateText } from "../../hepers";
+import { truncateText } from "../../helpers";
 import UserListModal from "../../common/UserListModal";
 import { useChat } from "../../store/hooks";
 import { useAuth } from "../../store/hooks";

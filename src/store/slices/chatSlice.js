@@ -52,13 +52,13 @@ export const createChat = createAsyncThunk(
 
 export const sendMessage = createAsyncThunk(
   'chat/sendMessage',
-  async ({ chatId, text, image }, { getState, rejectWithValue }) => {
+  async ({ chatId, text, image, tempId }, { getState, rejectWithValue }) => {
     if (!text?.trim() && !image) return rejectWithValue(new Error('Empty message'));
     try {
       const msg = await chatService.sendMessage(chatId, text?.trim() || '', image);
-      return { chatId, message: msg };
+      return { chatId, message: msg, tempId };
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || 'Failed to send message');
+      return rejectWithValue({ error: err.response?.data?.message || 'Failed to send message', tempId });
     }
   }
 );
@@ -106,6 +106,19 @@ const chatSlice = createSlice({
       const { chatId, message } = action.payload;
       if (!state.messagesByChatId[chatId]) state.messagesByChatId[chatId] = [];
       state.messagesByChatId[chatId].push(message);
+    },
+    addOptimisticMessage: (state, action) => {
+      const { chatId, message } = action.payload;
+      if (!state.messagesByChatId[chatId]) state.messagesByChatId[chatId] = [];
+      state.messagesByChatId[chatId].push(message);
+    },
+    removeOptimisticMessage: (state, action) => {
+      const { chatId, tempId } = action.payload;
+      const list = state.messagesByChatId[chatId];
+      if (list) {
+        const idx = list.findIndex((m) => m._id === tempId);
+        if (idx !== -1) list.splice(idx, 1);
+      }
     },
     updateChatLastMessage: (state, action) => {
       const { chatId, text, createdAt } = action.payload;
@@ -181,9 +194,16 @@ const chatSlice = createSlice({
       })
       .addCase(sendMessage.fulfilled, (state, action) => {
         state.sending = false;
-        const { chatId, message } = action.payload;
-        if (!state.messagesByChatId[chatId]) state.messagesByChatId[chatId] = [];
-        state.messagesByChatId[chatId].push(message);
+        const { chatId, message, tempId } = action.payload;
+        const list = state.messagesByChatId[chatId];
+        if (list && tempId) {
+          const idx = list.findIndex((m) => m._id === tempId);
+          if (idx !== -1) list[idx] = message;
+          else list.push(message);
+        } else {
+          if (!state.messagesByChatId[chatId]) state.messagesByChatId[chatId] = [];
+          state.messagesByChatId[chatId].push(message);
+        }
         const chat = state.chats.find((c) => c._id === chatId);
         if (chat) {
           chat.lastMessage = message.text;
@@ -192,7 +212,16 @@ const chatSlice = createSlice({
       })
       .addCase(sendMessage.rejected, (state, action) => {
         state.sending = false;
-        state.error = action.payload;
+        const payload = action.payload;
+        state.error = typeof payload === 'object' && payload?.error ? payload.error : payload;
+        const arg = action.meta?.arg;
+        if (arg?.chatId && arg?.tempId) {
+          const list = state.messagesByChatId[arg.chatId];
+          if (list) {
+            const idx = list.findIndex((m) => m._id === arg.tempId);
+            if (idx !== -1) list.splice(idx, 1);
+          }
+        }
       });
   },
 });

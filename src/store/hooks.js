@@ -96,8 +96,9 @@ export const useChat = () => {
       loadMessages: (chatId) => dispatch(loadMessagesThunk(chatId)),
       loadAvailableUsers: () => dispatch(loadAvailableUsersThunk()),
       createChat: (participantId) => dispatch(createChatThunk(participantId)).unwrap(),
-      sendMessage: (chatId, text, image = null) =>
-        dispatch(sendMessageThunk({ chatId, text, image })).unwrap(),
+      sendMessage: (chatId, text, image = null, tempId = null) =>
+        dispatch(sendMessageThunk({ chatId, text, image, tempId })).unwrap(),
+      addOptimisticMessage: (payload) => dispatch(chatActions.addOptimisticMessage(payload)),
       selectChat: (chatId) => dispatch(selectChatThunk(chatId)),
       loadingChats,
       loadingMessages,
