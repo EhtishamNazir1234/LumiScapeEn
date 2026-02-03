@@ -1,10 +1,20 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { IoSettingsOutline } from "react-icons/io5";
 import { NotificationIcon } from "../assets/icon";
 import { useNotifications } from "../store/hooks";
 
-const Notifications = () => {
-  const { notifications, markAsRead, markAllAsRead } = useNotifications();
+const Notifications = ({ onClose }) => {
+  const navigate = useNavigate();
+  const { notifications, removeNotification, markAllAsRead } = useNotifications();
+
+  const handleNotificationClick = (notification) => {
+    removeNotification(notification.id);
+    onClose?.();
+    if (notification.link) {
+      navigate(notification.link, notification.chatId ? { state: { openChatId: notification.chatId } } : {});
+    }
+  };
 
   return (
     <div className="md:w-100 w-75 md:p-7 py-4 px-3 bg-white rounded-[20px] box-shadow">
@@ -31,8 +41,8 @@ const Notifications = () => {
               key={notification.id}
               role="button"
               tabIndex={0}
-              onClick={() => markAsRead(notification.id)}
-              onKeyDown={(e) => e.key === "Enter" && markAsRead(notification.id)}
+              onClick={() => handleNotificationClick(notification)}
+              onKeyDown={(e) => e.key === "Enter" && handleNotificationClick(notification)}
               className={`flex gap-2 rounded-lg cursor-pointer md:my-7 my-3 p-2 hover:bg-gray-50 ${!notification.isRead ? "bg-[#0060A9]/5" : ""}`}
             >
               <div className="shrink-0">

@@ -5,6 +5,7 @@ import {
   addNotification as addNotificationAction,
   markAsRead as markAsReadAction,
   markAllAsRead as markAllAsReadAction,
+  removeNotification as removeNotificationAction,
 } from './slices/notificationSlice';
 import {
   login as loginThunk,
@@ -60,6 +61,7 @@ export const useNotifications = () => {
       addNotification: (payload) => dispatch(addNotificationAction(payload)),
       markAsRead: (id) => dispatch(markAsReadAction(id)),
       markAllAsRead: () => dispatch(markAllAsReadAction()),
+      removeNotification: (id) => dispatch(removeNotificationAction(id)),
     }),
     [dispatch, notifications, unreadCount]
   );

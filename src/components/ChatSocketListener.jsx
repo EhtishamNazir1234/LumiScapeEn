@@ -70,8 +70,10 @@ export default function ChatSocketListener() {
         store.dispatch(
           addNotification({
             label: 'New message',
-            message: `${senderName} sent you a message`,
             date: new Date().toLocaleDateString(),
+            link: '/chat',
+            chatId,
+            senderName,
           })
         );
       }

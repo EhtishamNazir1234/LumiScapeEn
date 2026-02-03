@@ -45,6 +45,14 @@ const ChatDetails = ({ onBack }) => {
     scrollToBottom();
   }, [messages]);
 
+  // Focus input when opening or switching chat so user can type immediately
+  useEffect(() => {
+    if (activeChatId) {
+      const t = setTimeout(() => textareaRef.current?.focus(), 100);
+      return () => clearTimeout(t);
+    }
+  }, [activeChatId]);
+
   const handleSend = async (e) => {
     e?.preventDefault();
     if ((!inputText.trim() && !pendingImage) || !activeChatId || sending) return;
@@ -250,7 +258,6 @@ const ChatDetails = ({ onBack }) => {
             }
           }}
           className="chat-emoji-safe border border-[#AFCDE2] rounded-xl p-3 w-full text-xs md:text-[14px] placeholder-[#9AC0DC] resize-none focus:outline-none focus:ring-2 focus:ring-[#0060A9]/30"
-          disabled={sending}
         />
         <div className="flex py-3 md:py-5 justify-between items-center w-full relative">
           <div className="flex gap-2 items-center">

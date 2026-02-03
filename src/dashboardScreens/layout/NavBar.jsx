@@ -10,16 +10,13 @@ import { useChat } from "../../store/hooks";
 
 const NavBar = () => {
   const { user } = useAuth();
-  const { unreadCount, markAllAsRead } = useNotifications();
+  const { unreadCount } = useNotifications();
   const { totalUnreadChatMessages } = useChat();
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
   const profileRef = useRef(null);
-  const toggleNotifications = () => {
-    const next = !showNotifications;
-    setShowNotifications(next);
-    if (next) markAllAsRead();
-  };
+  const toggleNotifications = () => setShowNotifications((prev) => !prev);
+  const closeNotifications = () => setShowNotifications(false);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -73,7 +70,7 @@ const NavBar = () => {
           </button>
           {showNotifications && (
             <div className="absolute right-0 mt-5 md:w-80 w-65 !mx-auto z-10">
-              <Notifications />
+              <Notifications onClose={closeNotifications} />
             </div>
           )}
         </div>
