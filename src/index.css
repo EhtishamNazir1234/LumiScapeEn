@@ -10,6 +10,15 @@
 .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
 .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
 
+@keyframes message-flash {
+  0% { opacity: 0.4; background-color: rgba(0, 96, 169, 0.08); transform: translateY(4px); }
+  50% { background-color: rgba(0, 96, 169, 0.12); }
+  100% { opacity: 1; background-color: transparent; transform: translateY(0); }
+}
+.message-flash {
+  animation: message-flash 0.5s ease-out forwards;
+}
+
 .custom-shadow-button {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
   border-radius: 9999px;

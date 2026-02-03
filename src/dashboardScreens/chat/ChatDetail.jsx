@@ -64,6 +64,15 @@ const ChatDetails = ({ onBack }) => {
     clearSelection();
   }, [activeChatId]);
 
+  const prevMessageCountRef = useRef(0);
+  useEffect(() => {
+    prevMessageCountRef.current = messages.length;
+  }, [activeChatId]);
+  const newMessageJustAdded = messages.length > prevMessageCountRef.current;
+  useEffect(() => {
+    prevMessageCountRef.current = messages.length;
+  }, [messages.length]);
+
   // Emit typing indicator (debounced) when user types
   useEffect(() => {
     const socket = socketRef?.current;
@@ -300,16 +309,17 @@ const ChatDetails = ({ onBack }) => {
           ) : messages.length === 0 ? (
             <div className="py-8 text-center text-gray-500">No messages yet. Say hello!</div>
           ) : (
-            messages.map((msg) => {
+            messages.map((msg, idx) => {
               const isSelf = msg.sender?._id === user?._id || msg.sender === user?._id;
               const senderName = msg.senderName || msg.sender?.name || (isSelf ? "You" : "Unknown");
               const senderAvatar = isSelf ? (user?.profileImage || profilePic) : (msg.sender?.profileImage || profilePic);
               const msgId = String(msg._id);
               const isSelected = selectMode && selectedIds.has(msgId);
+              const isNewMessage = newMessageJustAdded && idx === messages.length - 1;
               return (
                 <div
                   key={msg._id}
-                  className={`flex pb-2 md:pb-3 ${selectMode ? "cursor-pointer" : ""} ${isSelected ? "bg-[#C5DCEB]/20 rounded-lg -mx-2 px-2" : ""}`}
+                  className={`flex pb-2 md:pb-3 rounded-lg ${isNewMessage ? "message-flash" : ""} ${selectMode ? "cursor-pointer" : ""} ${isSelected ? "bg-[#C5DCEB]/20 -mx-2 px-2" : ""}`}
                   onClick={() => selectMode && toggleSelect(msgId)}
                 >
                   {selectMode && (
