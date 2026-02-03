@@ -1,25 +1,25 @@
-import { useEffect, useRef } from 'react';
+import { createContext, useContext, useEffect, useRef } from 'react';
 import { useStore, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import { getSocketUrl } from '../services/chat.service';
 import { chatActions } from '../store/slices/chatSlice';
 import { addNotification } from '../store/slices/notificationSlice';
 
-export default function ChatSocketListener() {
+const ChatSocketContext = createContext(null);
+
+export function ChatSocketProvider({ children }) {
   const store = useStore();
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const user = useSelector((state) => state.auth.user);
   const socketRef = useRef(null);
   const prevActiveChatIdRef = useRef(null);
 
-  // Connect socket when user is authenticated; re-run when auth becomes ready
   useEffect(() => {
     if (!isAuthenticated || !user) return;
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    const socketUrl = getSocketUrl();
-    const socket = io(socketUrl, {
+    const socket = io(getSocketUrl(), {
       auth: { token },
       transports: ['websocket', 'polling'],
     });
@@ -28,7 +28,6 @@ export default function ChatSocketListener() {
 
     socket.on('connect', () => {
       const { chats, activeChatId } = store.getState().chat;
-      // Join all chat rooms so we receive new messages for every chat (not only the active one)
       (chats || []).forEach((c) => {
         if (c._id) socket.emit('join_chat', String(c._id));
       });
@@ -52,6 +51,17 @@ export default function ChatSocketListener() {
       console.warn('Chat socket connection error:', err.message);
     });
 
+    socket.on('user_typing', ({ chatId, userId, userName }) => {
+      if (userId && chatId) {
+        store.dispatch(chatActions.setUserTyping({ chatId, userId, userName }));
+      }
+    });
+    socket.on('user_stopped_typing', ({ chatId, userId }) => {
+      if (userId && chatId) {
+        store.dispatch(chatActions.setUserStoppedTyping({ chatId, userId }));
+      }
+    });
+
     socket.on('new_message', (message) => {
       const state = store.getState();
       const { user: currentUser } = state.auth;
@@ -65,8 +75,7 @@ export default function ChatSocketListener() {
       }
       if (!isFromMe && chatId !== activeChatId) {
         store.dispatch(chatActions.incrementUnreadForChat(chatId));
-        const senderName =
-          message.senderName || message.sender?.name || 'Someone';
+        const senderName = message.senderName || message.sender?.name || 'Someone';
         store.dispatch(
           addNotification({
             label: 'New message',
@@ -92,7 +101,6 @@ export default function ChatSocketListener() {
     };
   }, [store, isAuthenticated, user?._id]);
 
-  // Join all chat rooms when chats load/update; sync activeChatId for leave/join
   useEffect(() => {
     if (!socketRef.current) return;
     const joinedChatIdsRef = { current: new Set() };
@@ -107,10 +115,7 @@ export default function ChatSocketListener() {
           joinedChatIdsRef.current.add(id);
         }
       });
-      const prev = prevActiveChatIdRef.current;
-      if (prev !== activeChatId) {
-        prevActiveChatIdRef.current = activeChatId;
-      }
+      prevActiveChatIdRef.current = activeChatId;
     });
     const { chats, activeChatId } = store.getState().chat;
     const socket = socketRef.current;
@@ -127,5 +132,13 @@ export default function ChatSocketListener() {
     return unsubscribe;
   }, [store, isAuthenticated]);
 
-  return null;
+  return (
+    <ChatSocketContext.Provider value={socketRef}>
+      {children}
+    </ChatSocketContext.Provider>
+  );
+}
+
+export function useChatSocket() {
+  return useContext(ChatSocketContext);
 }

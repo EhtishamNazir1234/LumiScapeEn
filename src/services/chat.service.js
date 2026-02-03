@@ -33,4 +33,16 @@ export const chatService = {
     const response = await api.post(`/chat/${chatId}/messages`, payload);
     return response.data;
   },
+
+  deleteChat: async (chatId) => {
+    const response = await api.delete(`/chat/${chatId}`);
+    return response.data;
+  },
+
+  deleteMessages: async (chatId, messageIds) => {
+    const response = await api.delete(`/chat/${chatId}/messages`, {
+      data: { messageIds: Array.isArray(messageIds) ? messageIds : [messageIds] },
+    });
+    return response.data;
+  },
 };

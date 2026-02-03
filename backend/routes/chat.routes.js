@@ -101,6 +101,60 @@ router.post('/', [
   }
 });
 
+// @route   DELETE /api/chat/:chatId
+// @desc    Delete a chat and all its messages
+// @access  Private
+router.delete('/:chatId', async (req, res) => {
+  try {
+    const chat = await Chat.findById(req.params.chatId);
+    if (!chat) return res.status(404).json({ message: 'Chat not found' });
+    if (!chat.participants.some(p => String(p) === String(req.user._id))) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+    await Message.deleteMany({ chatId: req.params.chatId });
+    await Chat.findByIdAndDelete(req.params.chatId);
+    res.json({ message: 'Chat deleted' });
+  } catch (error) {
+    console.error('Delete chat error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   DELETE /api/chat/:chatId/messages
+// @desc    Delete one or more messages
+// @access  Private
+router.delete('/:chatId/messages', [
+  body('messageIds').isArray().withMessage('messageIds must be an array'),
+  body('messageIds.*').isMongoId().withMessage('Invalid message ID')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    const chat = await Chat.findById(req.params.chatId);
+    if (!chat) return res.status(404).json({ message: 'Chat not found' });
+    if (!chat.participants.some(p => String(p) === String(req.user._id))) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+    const { messageIds } = req.body;
+    const result = await Message.deleteMany({
+      _id: { $in: messageIds },
+      chatId: req.params.chatId
+    });
+    const messages = await Message.find({ chatId: req.params.chatId })
+      .sort({ createdAt: -1 })
+      .limit(1)
+      .populate('sender', 'name email userId profileImage');
+    const lastMsg = messages[0];
+    chat.lastMessage = lastMsg ? (lastMsg.text || (lastMsg.image ? '[Image]' : '')) : null;
+    chat.lastMessageTime = lastMsg ? lastMsg.createdAt : null;
+    await chat.save();
+    res.json({ deleted: result.deletedCount, lastMessage: lastMsg });
+  } catch (error) {
+    console.error('Delete messages error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   POST /api/chat/:chatId/messages
 // @desc    Send message in chat (text and/or image)
 // @access  Private

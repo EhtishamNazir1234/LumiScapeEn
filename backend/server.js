@@ -117,6 +117,26 @@ io.on('connection', (socket) => {
     socket.leave(`chat:${String(chatId)}`);
   });
 
+  socket.on('typing_start', (data) => {
+    const chatId = data?.chatId ? String(data.chatId) : null;
+    if (chatId) {
+      socket.to(`chat:${chatId}`).emit('user_typing', {
+        chatId,
+        userId: userId,
+        userName: socket.user?.name,
+      });
+    }
+  });
+  socket.on('typing_stop', (data) => {
+    const chatId = data?.chatId ? String(data.chatId) : null;
+    if (chatId) {
+      socket.to(`chat:${chatId}`).emit('user_stopped_typing', {
+        chatId,
+        userId: userId,
+      });
+    }
+  });
+
   socket.on('disconnect', () => {
     if (userId) {
       onlineUserIds.delete(userId);

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../store/hooks";
 import { useChat } from "../../store/hooks";
 import { chatActions, loadChats, selectChats } from "../../store/slices/chatSlice";
@@ -10,6 +10,8 @@ import ChatDetails from "./ChatDetail";
 const Chat = () => {
   const dispatch = useDispatch();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { chatId: urlChatId } = useParams();
   const { isAuthenticated } = useAuth();
   const { activeChatId, setActiveChatId, selectChat } = useChat();
   const chats = useSelector(selectChats);
@@ -21,14 +23,27 @@ const Chat = () => {
     dispatch(chatActions.clearAllChatUnreads());
   }, [dispatch]);
 
-  // Open specific chat when navigated from notification (state.openChatId)
+  // Sync URL chatId with active chat (each chat has its own room via URL)
   useEffect(() => {
-    const openChatId = location.state?.openChatId;
-    if (openChatId) {
+    const openChatId = location.state?.openChatId || urlChatId;
+    if (openChatId && openChatId !== activeChatId) {
       selectChat(openChatId);
-      window.history.replaceState({}, '', location.pathname);
+      if (location.state?.openChatId) window.history.replaceState({}, '', location.pathname);
+    } else if (!urlChatId && activeChatId) {
+      setActiveChatId(null);
     }
-  }, [location.state?.openChatId, selectChat, location.pathname]);
+  }, [urlChatId, location.state?.openChatId, activeChatId, selectChat, setActiveChatId]);
+
+  // Navigate to chat room when selecting a chat
+  const handleSelectChat = (id) => {
+    selectChat(id);
+    navigate(id ? `/chat/${id}` : '/chat');
+  };
+
+  const handleBack = () => {
+    setActiveChatId(null);
+    navigate('/chat');
+  };
 
   // Load chats only when list is empty so switching tabs doesn't refetch.
   // Ref prevents re-firing when user has 0 chats (would otherwise loop).
@@ -40,17 +55,20 @@ const Chat = () => {
     }
   }, [isAuthenticated, chats.length, loadingChats, dispatch]);
 
+  // Resolve active chat: URL param takes precedence for deep-linking
+  const effectiveActiveChatId = urlChatId || activeChatId;
+
   return (
     <div className="w-full h-[calc(100%-20px)]">
       <div className="hidden md:flex gap-4 w-full h-full">
-        <ChatSideBar />
-        <ChatDetails onBack={() => setActiveChatId(null)} />
+        <ChatSideBar onSelectChat={handleSelectChat} />
+        <ChatDetails onBack={handleBack} urlChatId={urlChatId} />
       </div>
       <div className="flex md:hidden w-full h-full">
-        {activeChatId ? (
-          <ChatDetails onBack={() => setActiveChatId(null)} />
+        {effectiveActiveChatId ? (
+          <ChatDetails onBack={handleBack} urlChatId={urlChatId} />
         ) : (
-          <ChatSideBar />
+          <ChatSideBar onSelectChat={handleSelectChat} />
         )}
       </div>
     </div>

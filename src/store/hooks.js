@@ -23,7 +23,10 @@ import {
   loadAvailableUsers as loadAvailableUsersThunk,
   createChat as createChatThunk,
   sendMessage as sendMessageThunk,
+  deleteChat as deleteChatThunk,
+  deleteMessages as deleteMessagesThunk,
   selectChat as selectChatThunk,
+  selectTypingInActiveChat,
   chatActions,
 } from './slices/chatSlice';
 
@@ -81,6 +84,7 @@ export const useChat = () => {
   const error = useSelector((state) => state.chat.error);
   const totalUnreadChatMessages = useSelector(selectTotalUnreadChatMessages);
   const onlineUserIds = useSelector((state) => state.chat.onlineUserIds);
+  const typingInActiveChat = useSelector(selectTypingInActiveChat);
 
   const isUserOnline = useCallback(
     (userId) => !!onlineUserIds[userId],
@@ -103,6 +107,8 @@ export const useChat = () => {
         dispatch(sendMessageThunk({ chatId, text, image, tempId })).unwrap(),
       addOptimisticMessage: (payload) => dispatch(chatActions.addOptimisticMessage(payload)),
       selectChat: (chatId) => dispatch(selectChatThunk(chatId)),
+      deleteChat: (chatId) => dispatch(deleteChatThunk(chatId)),
+      deleteMessages: (chatId, messageIds) => dispatch(deleteMessagesThunk({ chatId, messageIds })),
       loadingChats,
       loadingMessages,
       sending,
@@ -110,6 +116,7 @@ export const useChat = () => {
       setError: (e) => dispatch(chatActions.setError(e)),
       isUserOnline,
       totalUnreadChatMessages,
+      typingInActiveChat,
     }),
     [
       dispatch,
@@ -124,6 +131,7 @@ export const useChat = () => {
       error,
       isUserOnline,
       totalUnreadChatMessages,
+      typingInActiveChat,
     ]
   );
 };

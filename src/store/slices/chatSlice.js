@@ -63,6 +63,30 @@ export const sendMessage = createAsyncThunk(
   }
 );
 
+export const deleteChat = createAsyncThunk(
+  'chat/deleteChat',
+  async (chatId, { rejectWithValue }) => {
+    try {
+      await chatService.deleteChat(chatId);
+      return chatId;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to delete chat');
+    }
+  }
+);
+
+export const deleteMessages = createAsyncThunk(
+  'chat/deleteMessages',
+  async ({ chatId, messageIds }, { rejectWithValue }) => {
+    try {
+      const result = await chatService.deleteMessages(chatId, messageIds);
+      return { chatId, messageIds, lastMessage: result.lastMessage };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to delete messages');
+    }
+  }
+);
+
 const chatSlice = createSlice({
   name: 'chat',
   initialState: {
@@ -76,6 +100,7 @@ const chatSlice = createSlice({
     error: null,
     onlineUserIds: {},
     unreadByChatId: {},
+    typingByChatId: {}, // { [chatId]: { userId, userName, ts } }
   },
   reducers: {
     setActiveChatId: (state, action) => {
@@ -101,6 +126,20 @@ const chatSlice = createSlice({
     setUserOffline: (state, action) => {
       const userId = action.payload;
       if (userId) state.onlineUserIds[userId] = false;
+    },
+    setUserTyping: (state, action) => {
+      const { chatId, userId, userName } = action.payload;
+      if (!chatId) return;
+      if (!state.typingByChatId[chatId]) state.typingByChatId[chatId] = {};
+      state.typingByChatId[chatId][userId] = { userName: userName || 'Someone', ts: Date.now() };
+    },
+    setUserStoppedTyping: (state, action) => {
+      const { chatId, userId } = action.payload;
+      if (!chatId || !state.typingByChatId[chatId]) return;
+      delete state.typingByChatId[chatId][userId];
+      if (Object.keys(state.typingByChatId[chatId]).length === 0) {
+        delete state.typingByChatId[chatId];
+      }
     },
     appendMessage: (state, action) => {
       const { chatId, message } = action.payload;
@@ -138,9 +177,17 @@ const chatSlice = createSlice({
       state.messagesByChatId = {};
       state.availableUsers = [];
       state.unreadByChatId = {};
+      state.typingByChatId = {};
     },
     clearAllChatUnreads: (state) => {
       state.unreadByChatId = {};
+    },
+    removeMessages: (state, action) => {
+      const { chatId, messageIds } = action.payload;
+      const list = state.messagesByChatId[chatId];
+      if (!list) return;
+      const ids = new Set(action.payload.messageIds.map(String));
+      state.messagesByChatId[chatId] = list.filter((m) => !ids.has(String(m._id)));
     },
   },
   extraReducers: (builder) => {
@@ -210,6 +257,31 @@ const chatSlice = createSlice({
           chat.lastMessageTime = message.createdAt;
         }
       })
+      .addCase(deleteChat.fulfilled, (state, action) => {
+        const chatId = action.payload;
+        state.chats = state.chats.filter((c) => String(c._id) !== String(chatId));
+        delete state.messagesByChatId[chatId];
+        if (String(state.activeChatId) === String(chatId)) state.activeChatId = null;
+      })
+      .addCase(deleteChat.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+      .addCase(deleteMessages.fulfilled, (state, action) => {
+        const { chatId, messageIds, lastMessage } = action.payload;
+        const list = state.messagesByChatId[chatId];
+        if (list) {
+          const ids = new Set(messageIds.map(String));
+          state.messagesByChatId[chatId] = list.filter((m) => !ids.has(String(m._id)));
+        }
+        const chat = state.chats.find((c) => c._id === chatId);
+        if (chat && lastMessage !== undefined) {
+          chat.lastMessage = lastMessage ? (lastMessage.text || (lastMessage.image ? '[Image]' : '')) : null;
+          chat.lastMessageTime = lastMessage ? lastMessage.createdAt : null;
+        }
+      })
+      .addCase(deleteMessages.rejected, (state, action) => {
+        state.error = action.payload;
+      })
       .addCase(sendMessage.rejected, (state, action) => {
         state.sendingCount = Math.max(0, state.sendingCount - 1);
         const payload = action.payload;
@@ -266,3 +338,19 @@ export const selectMessagesForActiveChat = createSelector(
 export const selectTotalUnreadChatMessages = (state) =>
   Object.values(state.chat.unreadByChatId).reduce((sum, n) => sum + n, 0);
 export const selectIsUserOnline = (state, userId) => !!state.chat.onlineUserIds[userId];
+const EMPTY_TYPING = [];
+export const selectTypingInActiveChat = createSelector(
+  [
+    (state) => state.chat.activeChatId,
+    (state) => state.chat.typingByChatId,
+    (state) => state.auth.user?._id,
+  ],
+  (activeChatId, typingByChatId, myId) => {
+    if (!activeChatId || !typingByChatId?.[activeChatId]) return EMPTY_TYPING;
+    const myIdStr = myId ? String(myId) : null;
+    const list = Object.entries(typingByChatId[activeChatId])
+      .filter(([uid]) => uid !== myIdStr)
+      .map(([uid, v]) => ({ userId: uid, userName: v?.userName || 'Someone' }));
+    return list.length ? list : EMPTY_TYPING;
+  }
+);

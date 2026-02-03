@@ -4,6 +4,7 @@ import { truncateText } from "../../helpers";
 import UserListModal from "../../common/UserListModal";
 import { useChat } from "../../store/hooks";
 import { useAuth } from "../../store/hooks";
+import { Trash2 } from "lucide-react";
 
 const formatChatTime = (dateStr) => {
   if (!dateStr) return "";
@@ -16,13 +17,13 @@ const formatChatTime = (dateStr) => {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" });
 };
 
-const ChatSideBar = () => {
+const ChatSideBar = ({ onSelectChat }) => {
   const { user } = useAuth();
   const {
     chats,
     activeChatId,
-    selectChat,
     createChat,
+    deleteChat,
     loadAvailableUsers,
     availableUsers,
     loadingChats,
@@ -47,7 +48,20 @@ const ChatSideBar = () => {
     }
   };
 
-  const handleChatClick = (id) => selectChat(id);
+  const handleChatClick = (id) => (onSelectChat || (() => {}))(id);
+
+  const handleDeleteChat = async (e, chatId) => {
+    e.stopPropagation();
+    if (!window.confirm("Delete this chat and all messages?")) return;
+    try {
+      await deleteChat(chatId);
+      if (onSelectChat && (activeChatId === chatId || String(activeChatId) === String(chatId))) {
+        onSelectChat(null);
+      }
+    } catch {
+      // error in store
+    }
+  };
 
   const getOtherParticipant = (chat) => {
     if (!chat.participants?.length || !user?._id) return { _id: null, name: "Unknown", profileImage: null };
@@ -90,7 +104,7 @@ const ChatSideBar = () => {
                 key={chat._id}
               >
                 <div
-                  className={`flex space-x-3 md:space-x-4 p-2 md:p-3 cursor-pointer rounded-lg ${activeChatId === chat._id ? "bg-[#C5DCEB]/30" : ""}`}
+                  className={`group flex space-x-3 md:space-x-4 p-2 md:p-3 cursor-pointer rounded-lg ${activeChatId === chat._id || activeChatId === String(chat._id) ? "bg-[#C5DCEB]/30" : ""}`}
                   onClick={() => handleChatClick(chat._id)}
                 >
                   <div className="relative shrink-0 w-9 h-9 md:w-12 md:h-12 aspect-square rounded-full overflow-hidden bg-gray-100">
@@ -122,6 +136,14 @@ const ChatSideBar = () => {
                       {truncateText(chat.lastMessage || "No messages yet", 30)}
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteChat(e, chat._id)}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-red-100 text-red-500 shrink-0 transition-opacity"
+                    aria-label="Delete chat"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             );

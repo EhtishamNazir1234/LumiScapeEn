@@ -4,8 +4,10 @@ import emogiIcon from "../../assets/emogiIcon.svg";
 import gallaryIcon from "../../assets/gallaryIcon.svg";
 import { useChat } from "../../store/hooks";
 import { useAuth } from "../../store/hooks";
+import { useChatSocket } from "../../contexts/ChatSocketContext";
 import EmojiPicker from "emoji-picker-react";
 import { compressImage } from "../../utils/imageCompress";
+import { Trash2, X } from "lucide-react";
 
 const formatMessageTime = (dateStr) => {
   if (!dateStr) return "";
@@ -20,10 +22,14 @@ const formatMessageTime = (dateStr) => {
 
 const ChatDetails = ({ onBack }) => {
   const { user } = useAuth();
-  const { activeChatId, activeChat, messages, sendMessage, addOptimisticMessage, loadingMessages, sending, error, isUserOnline } = useChat();
+  const { activeChatId, activeChat, messages, sendMessage, addOptimisticMessage, deleteMessages, deleteChat, loadingMessages, sending, error, isUserOnline, typingInActiveChat } = useChat();
+  const socketRef = useChatSocket();
   const [inputText, setInputText] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [pendingImage, setPendingImage] = useState(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const typingTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
@@ -54,6 +60,38 @@ const ChatDetails = ({ onBack }) => {
     }
   }, [activeChatId]);
 
+  useEffect(() => {
+    clearSelection();
+  }, [activeChatId]);
+
+  // Emit typing indicator (debounced) when user types
+  useEffect(() => {
+    const socket = socketRef?.current;
+    if (!activeChatId || !socket?.connected) return;
+    if (inputText.trim()) {
+      socket.emit('typing_start', { chatId: activeChatId });
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        socket.emit('typing_stop', { chatId: activeChatId });
+      }, 2000);
+    } else {
+      socket.emit('typing_stop', { chatId: activeChatId });
+    }
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, [inputText, activeChatId, socketRef]);
+
+  // Emit typing_stop when leaving chat or sending
+  useEffect(() => {
+    return () => {
+      const socket = socketRef?.current;
+      if (activeChatId && socket?.connected) {
+        socket.emit('typing_stop', { chatId: activeChatId });
+      }
+    };
+  }, [activeChatId, socketRef]);
+
   const handleSend = (e) => {
     e?.preventDefault();
     if ((!inputText.trim() && !pendingImage) || !activeChatId) return;
@@ -73,6 +111,8 @@ const ChatDetails = ({ onBack }) => {
     });
     setInputText("");
     setPendingImage(null);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    socketRef?.current?.connected && socketRef.current.emit('typing_stop', { chatId: activeChatId });
     setTimeout(() => textareaRef.current?.focus(), 0);
     sendMessage(activeChatId, text, image, tempId).catch(() => {
       // Error handled in reducer (removes optimistic msg, sets error)
@@ -111,6 +151,41 @@ const ChatDetails = ({ onBack }) => {
     };
     reader.readAsDataURL(file);
     e.target.value = "";
+  };
+
+  const toggleSelect = (msgId) => {
+    if (!msgId) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(msgId)) next.delete(msgId);
+      else next.add(msgId);
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!activeChatId || selectedIds.size === 0) return;
+    try {
+      await deleteMessages(activeChatId, [...selectedIds]);
+      clearSelection();
+    } catch {
+      // error in store
+    }
+  };
+
+  const handleDeleteChat = async () => {
+    if (!activeChatId || !window.confirm("Delete this chat and all messages?")) return;
+    try {
+      await deleteChat(activeChatId);
+      onBack?.();
+    } catch {
+      // error in store
+    }
   };
 
   const getOtherParticipant = () => {
@@ -164,6 +239,47 @@ const ChatDetails = ({ onBack }) => {
             </div>
           </div>
         </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {selectMode ? (
+            <>
+              <button
+                type="button"
+                onClick={handleDeleteSelected}
+                disabled={selectedIds.size === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 disabled:opacity-50 text-sm"
+              >
+                <Trash2 size={16} />
+                Delete ({selectedIds.size})
+              </button>
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="p-1.5 rounded hover:bg-black/5"
+                aria-label="Cancel"
+              >
+                <X size={20} />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setSelectMode(true)}
+                className="text-sm text-[#0060A9] hover:underline"
+              >
+                Select
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteChat}
+                className="p-1.5 rounded hover:bg-red-100 text-red-500"
+                aria-label="Delete chat"
+              >
+                <Trash2 size={18} />
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -188,8 +304,23 @@ const ChatDetails = ({ onBack }) => {
               const isSelf = msg.sender?._id === user?._id || msg.sender === user?._id;
               const senderName = msg.senderName || msg.sender?.name || (isSelf ? "You" : "Unknown");
               const senderAvatar = isSelf ? (user?.profileImage || profilePic) : (msg.sender?.profileImage || profilePic);
+              const msgId = String(msg._id);
+              const isSelected = selectMode && selectedIds.has(msgId);
               return (
-                <div key={msg._id} className="flex pb-2 md:pb-3">
+                <div
+                  key={msg._id}
+                  className={`flex pb-2 md:pb-3 ${selectMode ? "cursor-pointer" : ""} ${isSelected ? "bg-[#C5DCEB]/20 rounded-lg -mx-2 px-2" : ""}`}
+                  onClick={() => selectMode && toggleSelect(msgId)}
+                >
+                  {selectMode && (
+                    <input
+                      type="checkbox"
+                      checked={!!isSelected}
+                      onChange={() => toggleSelect(msgId)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-2 mr-2 shrink-0 w-4 h-4 rounded border-[#0060A9] text-[#0060A9]"
+                    />
+                  )}
                   <div className="w-8 h-8 xl:w-14 xl:h-14 shrink-0 aspect-square rounded-full overflow-hidden bg-gray-200">
                     <img
                       src={senderAvatar}
@@ -224,6 +355,18 @@ const ChatDetails = ({ onBack }) => {
                 </div>
               );
             })
+          )}
+          {typingInActiveChat?.length > 0 && (
+            <div className="flex items-center gap-2 py-2 text-[#0060A9] text-sm">
+              <span className="typing-indicator flex gap-1">
+                <span className="w-2 h-2 rounded-full bg-[#0060A9]" />
+                <span className="w-2 h-2 rounded-full bg-[#0060A9]" />
+                <span className="w-2 h-2 rounded-full bg-[#0060A9]" />
+              </span>
+              <span>
+                {typingInActiveChat.map((t) => t.userName).join(', ')} typing...
+              </span>
+            </div>
           )}
           <div ref={messagesEndRef} />
         </div>

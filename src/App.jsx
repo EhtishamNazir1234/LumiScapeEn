@@ -31,7 +31,7 @@ import { useAuth } from "./store/hooks";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getRoleBasedRoute } from "./utils/roleRouting";
 import AuthInit from "./components/AuthInit";
-import ChatSocketListener from "./components/ChatSocketListener";
+import { ChatSocketProvider } from "./contexts/ChatSocketContext";
 
 // Component to handle role-based dashboard routing
 const RoleBasedDashboard = () => {
@@ -147,6 +147,7 @@ function AppRoutes() {
         />
         <Route path="/tickets" element={<TicketsAndComplaints />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/chat/:chatId" element={<Chat />} />
         <Route
           path="/system-analytics"
           element={
@@ -198,8 +199,9 @@ function App() {
   return (
     <AuthInit>
       <BrowserRouter>
-        <ChatSocketListener />
-        <AppRoutes />
+        <ChatSocketProvider>
+          <AppRoutes />
+        </ChatSocketProvider>
       </BrowserRouter>
     </AuthInit>
   );
