@@ -5,6 +5,7 @@ import gallaryIcon from "../../assets/gallaryIcon.svg";
 import { useChat } from "../../store/hooks";
 import { useAuth } from "../../store/hooks";
 import EmojiPicker from "emoji-picker-react";
+import { compressImage } from "../../utils/imageCompress";
 
 const formatMessageTime = (dateStr) => {
   if (!dateStr) return "";
@@ -53,9 +54,9 @@ const ChatDetails = ({ onBack }) => {
     }
   }, [activeChatId]);
 
-  const handleSend = async (e) => {
+  const handleSend = (e) => {
     e?.preventDefault();
-    if ((!inputText.trim() && !pendingImage) || !activeChatId || sending) return;
+    if ((!inputText.trim() && !pendingImage) || !activeChatId) return;
     const text = inputText.trim();
     const image = pendingImage || undefined;
     const tempId = `opt-${Date.now()}`;
@@ -73,11 +74,9 @@ const ChatDetails = ({ onBack }) => {
     setInputText("");
     setPendingImage(null);
     setTimeout(() => textareaRef.current?.focus(), 0);
-    try {
-      await sendMessage(activeChatId, text, image, tempId);
-    } catch (err) {
-      // error already in store; optimistic message removed by reducer
-    }
+    sendMessage(activeChatId, text, image, tempId).catch(() => {
+      // Error handled in reducer (removes optimistic msg, sets error)
+    });
   };
 
   const handleEmojiClick = (emojiData) => {
@@ -100,9 +99,15 @@ const ChatDetails = ({ onBack }) => {
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith("image/")) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const dataUrl = reader.result;
-      if (typeof dataUrl === "string" && dataUrl.length < 5 * 1024 * 1024) setPendingImage(dataUrl);
+      if (typeof dataUrl !== "string") return;
+      try {
+        const compressed = await compressImage(dataUrl);
+        setPendingImage(compressed);
+      } catch {
+        if (dataUrl.length < 5 * 1024 * 1024) setPendingImage(dataUrl);
+      }
     };
     reader.readAsDataURL(file);
     e.target.value = "";
@@ -124,7 +129,7 @@ const ChatDetails = ({ onBack }) => {
 
   const other = getOtherParticipant();
   const isOtherOnline = isUserOnline(other._id);
-  const canSend = (inputText.trim() || pendingImage) && !sending;
+  const canSend = !!(inputText.trim() || pendingImage);
 
   return (
     <div className="global-bg-color w-full box-shadow rounded-2xl h-full flex flex-col font-vivita overflow-hidden">

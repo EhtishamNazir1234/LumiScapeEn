@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
 import { chatService } from '../../services/chat.service';
 
 export const loadChats = createAsyncThunk(
@@ -72,7 +72,7 @@ const chatSlice = createSlice({
     availableUsers: [],
     loadingChats: false,
     loadingMessages: false,
-    sending: false,
+    sendingCount: 0,
     error: null,
     onlineUserIds: {},
     unreadByChatId: {},
@@ -189,11 +189,11 @@ const chatSlice = createSlice({
         state.error = action.payload;
       })
       .addCase(sendMessage.pending, (state) => {
-        state.sending = true;
+        state.sendingCount += 1;
         state.error = null;
       })
       .addCase(sendMessage.fulfilled, (state, action) => {
-        state.sending = false;
+        state.sendingCount = Math.max(0, state.sendingCount - 1);
         const { chatId, message, tempId } = action.payload;
         const list = state.messagesByChatId[chatId];
         if (list && tempId) {
@@ -211,7 +211,7 @@ const chatSlice = createSlice({
         }
       })
       .addCase(sendMessage.rejected, (state, action) => {
-        state.sending = false;
+        state.sendingCount = Math.max(0, state.sendingCount - 1);
         const payload = action.payload;
         state.error = typeof payload === 'object' && payload?.error ? payload.error : payload;
         const arg = action.meta?.arg;
@@ -257,10 +257,12 @@ export const selectActiveChat = (state) => {
   const { chats, activeChatId } = state.chat;
   return chats.find((c) => c._id === activeChatId) ?? null;
 };
-export const selectMessagesForActiveChat = (state) => {
-  const { activeChatId, messagesByChatId } = state.chat;
-  return activeChatId ? (messagesByChatId[activeChatId] || []) : [];
-};
+const EMPTY_MESSAGES = [];
+export const selectMessagesForActiveChat = createSelector(
+  [selectActiveChatId, selectMessagesByChatId],
+  (activeChatId, messagesByChatId) =>
+    activeChatId ? (messagesByChatId[activeChatId] ?? EMPTY_MESSAGES) : EMPTY_MESSAGES
+);
 export const selectTotalUnreadChatMessages = (state) =>
   Object.values(state.chat.unreadByChatId).reduce((sum, n) => sum + n, 0);
 export const selectIsUserOnline = (state, userId) => !!state.chat.onlineUserIds[userId];

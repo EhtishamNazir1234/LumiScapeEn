@@ -76,7 +76,8 @@ export const useChat = () => {
   const availableUsers = useSelector((state) => state.chat.availableUsers);
   const loadingChats = useSelector((state) => state.chat.loadingChats);
   const loadingMessages = useSelector((state) => state.chat.loadingMessages);
-  const sending = useSelector((state) => state.chat.sending);
+  const sendingCount = useSelector((state) => state.chat.sendingCount);
+  const sending = sendingCount > 0;
   const error = useSelector((state) => state.chat.error);
   const totalUnreadChatMessages = useSelector(selectTotalUnreadChatMessages);
   const onlineUserIds = useSelector((state) => state.chat.onlineUserIds);

@@ -1,9 +1,9 @@
-import React, { useEffect } from "react";
-import { useDispatch } from "react-redux";
+import React, { useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../../store/hooks";
 import { useChat } from "../../store/hooks";
-import { chatActions } from "../../store/slices/chatSlice";
+import { chatActions, loadChats, selectChats } from "../../store/slices/chatSlice";
 import ChatSideBar from "./ChatSideBar";
 import ChatDetails from "./ChatDetail";
 
@@ -11,7 +11,10 @@ const Chat = () => {
   const dispatch = useDispatch();
   const location = useLocation();
   const { isAuthenticated } = useAuth();
-  const { activeChatId, setActiveChatId, loadChats, chats, selectChat } = useChat();
+  const { activeChatId, setActiveChatId, selectChat } = useChat();
+  const chats = useSelector(selectChats);
+  const loadingChats = useSelector((state) => state.chat.loadingChats);
+  const hasTriggeredLoad = useRef(false);
 
   // Clear chat badge when user lands on chat page (clicked chat icon)
   useEffect(() => {
@@ -27,10 +30,15 @@ const Chat = () => {
     }
   }, [location.state?.openChatId, selectChat, location.pathname]);
 
-  // Load chats only when list is empty so switching tabs doesn't refetch
+  // Load chats only when list is empty so switching tabs doesn't refetch.
+  // Ref prevents re-firing when user has 0 chats (would otherwise loop).
   useEffect(() => {
-    if (isAuthenticated && chats.length === 0) loadChats();
-  }, [isAuthenticated, chats.length, loadChats]);
+    if (!isAuthenticated) hasTriggeredLoad.current = false;
+    if (isAuthenticated && chats.length === 0 && !loadingChats && !hasTriggeredLoad.current) {
+      hasTriggeredLoad.current = true;
+      dispatch(loadChats());
+    }
+  }, [isAuthenticated, chats.length, loadingChats, dispatch]);
 
   return (
     <div className="w-full h-[calc(100%-20px)]">
