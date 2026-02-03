@@ -45,9 +45,9 @@ const Notifications = ({ onClose }) => {
               onKeyDown={(e) => e.key === "Enter" && handleNotificationClick(notification)}
               className={`flex gap-2 rounded-lg cursor-pointer md:my-7 my-3 p-2 hover:bg-gray-50 ${!notification.isRead ? "bg-[#0060A9]/5" : ""}`}
             >
-              <div className="shrink-0">
+             
                 <NotificationIcon fill={notification.isRead ? "" : "#0060A9"} />
-              </div>
+              
               <div className="flex-1 min-w-0">
                 <div className="text-sm text-gray-700 text-[14px] font-light">
                   <span className="font-medium text-gray-900">{notification.label}</span>
@@ -56,7 +56,7 @@ const Notifications = ({ onClose }) => {
                 <span className="text-xs text-[#0060A9]">{notification.date}</span>
               </div>
               {!notification.isRead && (
-                <span className="w-2 h-2 mt-2 shrink-0 bg-[#0060A9] rounded-full" aria-hidden />
+                <span className="w-2 h-2 mt-2 bg-[#0060A9] rounded-full" aria-hidden />
               )}
             </div>
           ))
