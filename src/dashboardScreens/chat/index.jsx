@@ -17,22 +17,28 @@ const Chat = () => {
   const chats = useSelector(selectChats);
   const loadingChats = useSelector((state) => state.chat.loadingChats);
   const hasTriggeredLoad = useRef(false);
+  const selectChatRef = useRef(selectChat);
+  const setActiveChatIdRef = useRef(setActiveChatId);
+  selectChatRef.current = selectChat;
+  setActiveChatIdRef.current = setActiveChatId;
 
   // Clear chat badge when user lands on chat page (clicked chat icon)
   useEffect(() => {
     dispatch(chatActions.clearAllChatUnreads());
   }, [dispatch]);
 
-  // Sync URL chatId with active chat (each chat has its own room via URL)
+  // Sync URL chatId with active chat; use refs so effect only runs when URL/state/activeChatId change (avoids loops)
   useEffect(() => {
     const openChatId = location.state?.openChatId || urlChatId;
-    if (openChatId && openChatId !== activeChatId) {
-      selectChat(openChatId);
-      if (location.state?.openChatId) window.history.replaceState({}, '', location.pathname);
-    } else if (!urlChatId && activeChatId) {
-      setActiveChatId(null);
+    const openId = openChatId != null ? String(openChatId) : null;
+    const activeId = activeChatId != null ? String(activeChatId) : null;
+
+    if (openId && openId !== activeId) {
+      selectChatRef.current(openChatId);
+    } else if (!urlChatId && activeId) {
+      setActiveChatIdRef.current(null);
     }
-  }, [urlChatId, location.state?.openChatId, activeChatId, selectChat, setActiveChatId]);
+  }, [urlChatId, location.state?.openChatId, activeChatId]);
 
   // Navigate to chat room when selecting a chat
   const handleSelectChat = (id) => {

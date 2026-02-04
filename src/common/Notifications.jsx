@@ -12,7 +12,12 @@ const Notifications = ({ onClose }) => {
     removeNotification(notification.id);
     onClose?.();
     if (notification.link) {
-      navigate(notification.link, notification.chatId ? { state: { openChatId: notification.chatId } } : {});
+      const chatId = notification.chatId != null ? String(notification.chatId) : null;
+      if (chatId) {
+        navigate(`/chat/${chatId}`, { replace: false });
+      } else {
+        navigate(notification.link, {});
+      }
     }
   };
 
