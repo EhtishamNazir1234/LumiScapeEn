@@ -8,6 +8,7 @@ import { useChatSocket } from "../../contexts/ChatSocketContext";
 import EmojiPicker from "emoji-picker-react";
 import { compressImage } from "../../utils/imageCompress";
 import { Trash2, X } from "lucide-react";
+import DeleteModal from "../../common/DeleteModal";
 
 const formatMessageTime = (dateStr) => {
   if (!dateStr) return "";
@@ -29,6 +30,8 @@ const ChatDetails = ({ onBack }) => {
   const [pendingImage, setPendingImage] = useState(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showDeleteMessagesModal, setShowDeleteMessagesModal] = useState(false);
+  const [showDeleteChatModal, setShowDeleteChatModal] = useState(false);
   const typingTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -177,24 +180,14 @@ const ChatDetails = ({ onBack }) => {
     setSelectedIds(new Set());
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     if (!activeChatId || selectedIds.size === 0) return;
-    try {
-      await deleteMessages(activeChatId, [...selectedIds]);
-      clearSelection();
-    } catch {
-      // error in store
-    }
+    setShowDeleteMessagesModal(true);
   };
 
-  const handleDeleteChat = async () => {
-    if (!activeChatId || !window.confirm("Delete this chat and all messages?")) return;
-    try {
-      await deleteChat(activeChatId);
-      onBack?.();
-    } catch {
-      // error in store
-    }
+  const handleDeleteChat = () => {
+    if (!activeChatId) return;
+    setShowDeleteChatModal(true);
   };
 
   const getOtherParticipant = () => {
@@ -463,6 +456,36 @@ const ChatDetails = ({ onBack }) => {
           </button>
         </div>
       </form>
+      <DeleteModal
+        isOpen={showDeleteMessagesModal}
+        onClose={() => setShowDeleteMessagesModal(false)}
+        module="message(s)"
+        handleDelete={async () => {
+          try {
+            if (activeChatId && selectedIds.size > 0) {
+              await deleteMessages(activeChatId, [...selectedIds]);
+              clearSelection();
+            }
+          } finally {
+            setShowDeleteMessagesModal(false);
+          }
+        }}
+      />
+      <DeleteModal
+        isOpen={showDeleteChatModal}
+        onClose={() => setShowDeleteChatModal(false)}
+        module="chat"
+        handleDelete={async () => {
+          try {
+            if (activeChatId) {
+              await deleteChat(activeChatId);
+              onBack?.();
+            }
+          } finally {
+            setShowDeleteChatModal(false);
+          }
+        }}
+      />
     </div>
   );
 };

@@ -13,7 +13,11 @@ router.use(protect);
 // @access  Private
 router.get('/available-users', async (req, res) => {
   try {
-    const users = await User.find({ _id: { $ne: req.user._id }, status: { $ne: 'Archived' } })
+    // Never include the current user in the available users list
+    const users = await User.find({
+      _id: { $ne: req.user._id },
+      status: { $ne: 'Archived' }
+    })
       .select('_id name email profileImage')
       .sort({ name: 1 });
     res.json(users);
@@ -24,11 +28,14 @@ router.get('/available-users', async (req, res) => {
 });
 
 // @route   GET /api/chat
-// @desc    Get all chats for current user
+// @desc    Get all chats for current user (excluding chats soft-deleted for this user)
 // @access  Private
 router.get('/', async (req, res) => {
   try {
-    const chats = await Chat.find({ participants: req.user._id })
+    const chats = await Chat.find({
+      participants: req.user._id,
+      hiddenFor: { $ne: req.user._id }
+    })
       .populate('participants', 'name email userId profileImage')
       .sort({ lastMessageTime: -1 });
     
@@ -40,7 +47,7 @@ router.get('/', async (req, res) => {
 });
 
 // @route   GET /api/chat/:chatId/messages
-// @desc    Get messages for a chat
+// @desc    Get messages for a chat (excluding messages soft-deleted for this user)
 // @access  Private
 router.get('/:chatId/messages', async (req, res) => {
   try {
@@ -55,7 +62,10 @@ router.get('/:chatId/messages', async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to view this chat' });
     }
 
-    const messages = await Message.find({ chatId: req.params.chatId })
+    const messages = await Message.find({
+      chatId: req.params.chatId,
+      deletedFor: { $ne: req.user._id },
+    })
       .populate('sender', 'name email userId profileImage')
       .sort({ createdAt: 1 });
     
@@ -67,7 +77,7 @@ router.get('/:chatId/messages', async (req, res) => {
 });
 
 // @route   POST /api/chat
-// @desc    Create new chat or get existing
+// @desc    Create new chat or get existing; if it was hidden for this user, unhide and reuse history
 // @access  Private
 router.post('/', [
   body('participantId').notEmpty().withMessage('Participant ID is required')
@@ -80,7 +90,7 @@ router.post('/', [
 
     const { participantId } = req.body;
 
-    // Check if chat already exists
+    // Check if chat already exists between these two participants
     let chat = await Chat.findOne({
       participants: { $all: [req.user._id, participantId], $size: 2 }
     });
@@ -89,6 +99,10 @@ router.post('/', [
       chat = await Chat.create({
         participants: [req.user._id, participantId]
       });
+    } else if (Array.isArray(chat.hiddenFor) && chat.hiddenFor.some((id) => String(id) === String(req.user._id))) {
+      // If this user previously "deleted" (soft-deleted) the chat, unhide it now
+      chat.hiddenFor = chat.hiddenFor.filter((id) => String(id) !== String(req.user._id));
+      await chat.save();
     }
 
     const populatedChat = await Chat.findById(chat._id)
@@ -102,18 +116,33 @@ router.post('/', [
 });
 
 // @route   DELETE /api/chat/:chatId
-// @desc    Delete a chat and all its messages
+// @desc    Soft-delete chat for current user (hide it) but keep history for other participants
 // @access  Private
 router.delete('/:chatId', async (req, res) => {
   try {
     const chat = await Chat.findById(req.params.chatId);
     if (!chat) return res.status(404).json({ message: 'Chat not found' });
-    if (!chat.participants.some(p => String(p) === String(req.user._id))) {
+    if (!chat.participants.some((p) => String(p) === String(req.user._id))) {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    await Message.deleteMany({ chatId: req.params.chatId });
-    await Chat.findByIdAndDelete(req.params.chatId);
-    res.json({ message: 'Chat deleted' });
+
+    if (!Array.isArray(chat.hiddenFor)) {
+      chat.hiddenFor = [];
+    }
+    const alreadyHidden = chat.hiddenFor.some((id) => String(id) === String(req.user._id));
+    if (!alreadyHidden) {
+      chat.hiddenFor.push(req.user._id);
+      await chat.save();
+    }
+
+    // Soft-delete all existing messages in this chat for this user, so history
+    // stays deleted for them even if the chat becomes visible again.
+    await Message.updateMany(
+      { chatId: req.params.chatId },
+      { $addToSet: { deletedFor: req.user._id } }
+    );
+
+    res.json({ message: 'Chat hidden' });
   } catch (error) {
     console.error('Delete chat error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -121,7 +150,7 @@ router.delete('/:chatId', async (req, res) => {
 });
 
 // @route   DELETE /api/chat/:chatId/messages
-// @desc    Delete one or more messages
+// @desc    Soft-delete one or more messages for current user (hide them only for this user)
 // @access  Private
 router.delete('/:chatId/messages', [
   body('messageIds').isArray().withMessage('messageIds must be an array'),
@@ -136,19 +165,17 @@ router.delete('/:chatId/messages', [
       return res.status(403).json({ message: 'Not authorized' });
     }
     const { messageIds } = req.body;
-    const result = await Message.deleteMany({
-      _id: { $in: messageIds },
-      chatId: req.params.chatId
-    });
-    const messages = await Message.find({ chatId: req.params.chatId })
-      .sort({ createdAt: -1 })
-      .limit(1)
-      .populate('sender', 'name email userId profileImage');
-    const lastMsg = messages[0];
-    chat.lastMessage = lastMsg ? (lastMsg.text || (lastMsg.image ? '[Image]' : '')) : null;
-    chat.lastMessageTime = lastMsg ? lastMsg.createdAt : null;
-    await chat.save();
-    res.json({ deleted: result.deletedCount, lastMessage: lastMsg });
+    const result = await Message.updateMany(
+      {
+        _id: { $in: messageIds },
+        chatId: req.params.chatId
+      },
+      {
+        $addToSet: { deletedFor: req.user._id }
+      }
+    );
+    // We don't change chat.lastMessage globally; the other participant may still see those messages.
+    res.json({ deleted: result.modifiedCount });
   } catch (error) {
     console.error('Delete messages error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -178,6 +205,11 @@ router.post('/:chatId/messages', [
     // Verify user is participant
     if (!chat.participants.includes(req.user._id)) {
       return res.status(403).json({ message: 'Not authorized to send messages in this chat' });
+    }
+
+    // If this chat was soft-deleted (hidden) for any participant, unhide it for everyone
+    if (Array.isArray(chat.hiddenFor) && chat.hiddenFor.length > 0) {
+      chat.hiddenFor = [];
     }
 
     const message = await Message.create({

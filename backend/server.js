@@ -120,7 +120,8 @@ io.on('connection', (socket) => {
   socket.on('typing_start', (data) => {
     const chatId = data?.chatId ? String(data.chatId) : null;
     if (chatId) {
-      socket.to(`chat:${chatId}`).emit('user_typing', {
+      const room = `chat:${chatId}`;
+      socket.to(room).emit('user_typing', {
         chatId,
         userId: userId,
         userName: socket.user?.name,
@@ -130,7 +131,8 @@ io.on('connection', (socket) => {
   socket.on('typing_stop', (data) => {
     const chatId = data?.chatId ? String(data.chatId) : null;
     if (chatId) {
-      socket.to(`chat:${chatId}`).emit('user_stopped_typing', {
+      const room = `chat:${chatId}`;
+      socket.to(room).emit('user_stopped_typing', {
         chatId,
         userId: userId,
       });

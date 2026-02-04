@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { RxCross2 } from "react-icons/rx";
 import CustomCheckbox from "../common/CustomCheckbox"
 
@@ -12,6 +12,14 @@ const AssignTicketModal = ({
   onAssign
 }) => {
   const [checkedUsers, setCheckedUsers] = useState({});
+
+  useEffect(() => {
+    // Reset selection whenever the modal is closed,
+    // so reopening starts with all checkboxes unchecked.
+    if (!isOpen) {
+      setCheckedUsers({});
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

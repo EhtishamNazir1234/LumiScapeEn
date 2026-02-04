@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import profilePic from "../../assets/profile.svg";
 import { truncateText } from "../../helpers";
 import UserListModal from "../../common/UserListModal";
+import DeleteModal from "../../common/DeleteModal";
 import { useChat } from "../../store/hooks";
 import { useAuth } from "../../store/hooks";
 import { Trash2 } from "lucide-react";
@@ -31,6 +32,8 @@ const ChatSideBar = ({ onSelectChat }) => {
     isUserOnline,
   } = useChat();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteChatId, setDeleteChatId] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     if (isModalOpen) {
@@ -55,17 +58,10 @@ const ChatSideBar = ({ onSelectChat }) => {
 
   const handleChatClick = (id) => (onSelectChat || (() => {}))(id);
 
-  const handleDeleteChat = async (e, chatId) => {
+  const handleDeleteChatClick = (e, chatId) => {
     e.stopPropagation();
-    if (!window.confirm("Delete this chat and all messages?")) return;
-    try {
-      await deleteChat(chatId);
-      if (onSelectChat && (activeChatId === chatId || String(activeChatId) === String(chatId))) {
-        onSelectChat(null);
-      }
-    } catch {
-      // error in store
-    }
+    setDeleteChatId(chatId);
+    setShowDeleteModal(true);
   };
 
   const getOtherParticipant = (chat) => {
@@ -74,11 +70,15 @@ const ChatSideBar = ({ onSelectChat }) => {
     return other ? { _id: other._id, name: other.name || other.email, profileImage: other.profileImage } : { _id: null, name: "Unknown", profileImage: null };
   };
 
-  const listDataForModal = availableUsers.map((u) => ({
-    id: u._id,
-    name: u.name || u.email || "User",
-    avatar: u.profileImage || profilePic,
-  }));
+  // Ensure the current user is never shown in the \"Start Chatting\" list,
+  // even if the backend were to include it accidentally.
+  const listDataForModal = availableUsers
+    .filter((u) => String(u._id) !== String(user?._id))
+    .map((u) => ({
+      id: u._id,
+      name: u.name || u.email || "User",
+      avatar: u.profileImage || profilePic,
+    }));
 
   return (
     <div className="global-bg-color box-shadow w-full xl:h-full xl:w-[40%] md:w-[35%] rounded-2xl py-4 md:py-6 flex-col font-vivita">
@@ -143,7 +143,7 @@ const ChatSideBar = ({ onSelectChat }) => {
                   </div>
                   <button
                     type="button"
-                    onClick={(e) => handleDeleteChat(e, chat._id)}
+                    onClick={(e) => handleDeleteChatClick(e, chat._id)}
                     className="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-red-100 text-red-500 shrink-0 transition-opacity"
                     aria-label="Delete chat"
                   >
@@ -163,6 +163,30 @@ const ChatSideBar = ({ onSelectChat }) => {
         buttontext="Start Chat"
         onAssign={handleAssign}
         listData={listDataForModal}
+      />
+      <DeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeleteChatId(null);
+        }}
+        module="chat"
+        handleDelete={async () => {
+          if (!deleteChatId) return;
+          try {
+            await deleteChat(deleteChatId);
+            if (
+              onSelectChat &&
+              (activeChatId === deleteChatId ||
+                String(activeChatId) === String(deleteChatId))
+            ) {
+              onSelectChat(null);
+            }
+          } finally {
+            setShowDeleteModal(false);
+            setDeleteChatId(null);
+          }
+        }}
       />
     </div>
   );

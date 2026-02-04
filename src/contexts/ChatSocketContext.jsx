@@ -2,8 +2,15 @@ import { createContext, useContext, useEffect, useRef } from 'react';
 import { useStore, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import { getSocketUrl } from '../services/chat.service';
-import { chatActions } from '../store/slices/chatSlice';
+import { chatActions, loadChats } from '../store/slices/chatSlice';
 import { addNotification } from '../store/slices/notificationSlice';
+
+function normalizeChatId(v) {
+  if (v == null) return v;
+  if (typeof v === 'string') return v;
+  if (typeof v === 'object' && v.$oid) return v.$oid;
+  return String(v);
+}
 
 const ChatSocketContext = createContext(null);
 
@@ -53,12 +60,19 @@ export function ChatSocketProvider({ children }) {
 
     socket.on('user_typing', ({ chatId, userId, userName }) => {
       if (userId && chatId) {
-        store.dispatch(chatActions.setUserTyping({ chatId, userId, userName }));
+        store.dispatch(chatActions.setUserTyping({
+          chatId: normalizeChatId(chatId),
+          userId,
+          userName,
+        }));
       }
     });
     socket.on('user_stopped_typing', ({ chatId, userId }) => {
       if (userId && chatId) {
-        store.dispatch(chatActions.setUserStoppedTyping({ chatId, userId }));
+        store.dispatch(chatActions.setUserStoppedTyping({
+          chatId: normalizeChatId(chatId),
+          userId,
+        }));
       }
     });
 
@@ -66,21 +80,21 @@ export function ChatSocketProvider({ children }) {
       const state = store.getState();
       const { user: currentUser } = state.auth;
       const { activeChatId } = state.chat;
-      const chatId = message.chatId ? String(message.chatId) : message.chatId;
+      const chatId = normalizeChatId(message.chatId);
       const senderId = message.sender?._id ?? message.sender;
       const isFromMe = currentUser && (senderId === currentUser._id || String(senderId) === String(currentUser._id));
 
-      if (!isFromMe) {
-        store.dispatch(chatActions.appendMessage({ chatId, message }));
-      }
-      if (!isFromMe && chatId !== activeChatId) {
+      store.dispatch(chatActions.appendMessage({ chatId, message }));
+      if (!isFromMe && String(chatId) !== String(activeChatId)) {
         store.dispatch(chatActions.incrementUnreadForChat(chatId));
         const senderName = message.senderName || message.sender?.name || 'Someone';
         store.dispatch(
           addNotification({
             label: 'New message',
             date: new Date().toLocaleDateString(),
-            link: `/chat/${chatId}`,
+            // Always navigate to /chat and let the chat
+            // screen open the right conversation based on state.
+            link: `/chat`,
             chatId,
             senderName,
           })
@@ -88,11 +102,19 @@ export function ChatSocketProvider({ children }) {
       }
       store.dispatch(
         chatActions.updateChatLastMessage({
-          chatId,
+          chatId: String(chatId),
           text: message.text,
           createdAt: message.createdAt,
         })
       );
+
+      const latestState = store.getState();
+      const existsInList = (latestState.chat.chats || []).some(
+        (c) => String(c._id) === String(chatId)
+      );
+      if (!existsInList) {
+        store.dispatch(loadChats());
+      }
     });
 
     return () => {

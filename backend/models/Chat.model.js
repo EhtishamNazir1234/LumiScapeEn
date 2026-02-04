@@ -26,7 +26,13 @@ const messageSchema = new mongoose.Schema({
   read: {
     type: Boolean,
     default: false
-  }
+  },
+  // Per-user soft delete: message is hidden for these users
+  deletedFor: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: []
+  }]
 }, {
   timestamps: true
 });
@@ -47,7 +53,13 @@ const chatSchema = new mongoose.Schema({
   unreadCount: {
     type: Number,
     default: 0
-  }
+  },
+  // Per-user soft delete: chat is hidden for these users
+  hiddenFor: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: []
+  }]
 }, {
   timestamps: true
 });
