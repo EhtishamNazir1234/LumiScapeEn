@@ -33,8 +33,13 @@ const ChatSideBar = ({ onSelectChat }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    if (isModalOpen) loadAvailableUsers();
-  }, [isModalOpen, loadAvailableUsers]);
+    if (isModalOpen) {
+      // Load available users once when modal opens.
+      // We intentionally don't include loadAvailableUsers in deps
+      // to avoid re-calling when its function identity changes.
+      loadAvailableUsers();
+    }
+  }, [isModalOpen]);
 
   const handleCloseModal = () => setIsModalOpen(false);
 

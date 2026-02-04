@@ -71,7 +71,9 @@ export default function ChatSocketListener() {
           addNotification({
             label: 'New message',
             date: new Date().toLocaleDateString(),
-            link: `/chat/${chatId}`,
+            // Always go to /chat; we pass chatId via state so the chat
+            // screen can open the specific conversation.
+            link: `/chat`,
             chatId,
             senderName,
           })
