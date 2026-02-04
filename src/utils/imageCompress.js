@@ -1,10 +1,3 @@
-/**
- * Compress an image for faster upload. Resizes to max 1200px and compresses to JPEG.
- * @param {string} dataUrl - Base64 data URL (e.g. from FileReader)
- * @param {number} maxSize - Max dimension in pixels (default 1200)
- * @param {number} quality - JPEG quality 0–1 (default 0.85)
- * @returns {Promise<string>} Compressed data URL
- */
 export const compressImage = (dataUrl, maxSize = 1200, quality = 0.85) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
