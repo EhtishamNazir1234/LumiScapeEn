@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import InputField from "../../common/InputField";
 import ImageUploader from "../../common/ImageUploader";
 import { useAuth } from "../../store/hooks";
+import { compressImage } from "../../utils/imageCompress";
 
 const splitName = (name) => {
   if (!name || typeof name !== "string") return { first: "", last: "" };
@@ -64,7 +65,8 @@ const PersonalDetail = () => {
               value={user?.profileImage}
               onChange={async (dataUrl) => {
                 try {
-                  await updateProfile({ profileImage: dataUrl });
+                  const compressed = await compressImage(dataUrl, 400, 0.82);
+                  await updateProfile({ profileImage: compressed });
                 } catch {
                   setMessage({ type: "error", text: "Failed to update profile photo." });
                 }

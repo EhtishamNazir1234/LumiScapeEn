@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
 import { chatService } from '../../services/chat.service';
+import { updateProfile } from './authSlice';
 
 function normalizeMessageId(v) {
   if (v == null) return null;
@@ -349,6 +350,31 @@ const chatSlice = createSlice({
             if (idx !== -1) list.splice(idx, 1);
           }
         }
+      })
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        const updated = action.payload;
+        if (!updated?._id) return;
+        const myId = String(updated._id);
+        state.chats.forEach((chat) => {
+          if (!chat.participants) return;
+          chat.participants.forEach((p) => {
+            if (p && String(p._id) === myId) {
+              if (updated.profileImage !== undefined) p.profileImage = updated.profileImage;
+              if (updated.name !== undefined) p.name = updated.name;
+              if (updated.email !== undefined) p.email = updated.email;
+            }
+          });
+        });
+        Object.keys(state.messagesByChatId).forEach((chatId) => {
+          const list = state.messagesByChatId[chatId];
+          if (!list) return;
+          list.forEach((msg) => {
+            if (msg.sender && String(msg.sender._id) === myId) {
+              if (updated.profileImage !== undefined) msg.sender.profileImage = updated.profileImage;
+              if (updated.name !== undefined) msg.sender.name = updated.name;
+            }
+          });
+        });
       });
   },
 });

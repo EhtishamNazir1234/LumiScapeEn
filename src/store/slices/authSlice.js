@@ -81,8 +81,20 @@ const authSlice = createSlice({
         state.user = action.payload;
         state.isAuthenticated = true;
       })
+      .addCase(updateProfile.pending, (state, action) => {
+        const { profileImage, name, email, phone } = action.meta?.arg || {};
+        if (state.user && (profileImage !== undefined || name !== undefined || email !== undefined || phone !== undefined)) {
+          if (profileImage !== undefined) state.user.profileImage = profileImage;
+          if (name !== undefined) state.user.name = name;
+          if (email !== undefined) state.user.email = email;
+          if (phone !== undefined) state.user.phone = phone;
+        }
+      })
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.user = action.payload;
+      })
+      .addCase(updateProfile.rejected, () => {
+        /* On failure, fulfilled is not run; optimistic update remains until user retries or refreshes */
       });
   },
 });
