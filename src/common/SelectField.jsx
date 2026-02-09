@@ -24,7 +24,7 @@ const SelectField = ({
       <div className="relative">
         <select
           id={id}
-          value={value}
+          value={value ?? ""}
           onChange={onChange}
           className={`w-full ${
             rounded ? "rounded-4xl" : "rounded-lg"
@@ -33,9 +33,9 @@ const SelectField = ({
             boxShadow: "inset 2px 3px 5px rgba(0, 0, 0, 0.15)",
           }}
         >
-          <option>-- Select Option --</option>
+          <option value="">-- Select Option --</option>
           {options.map((option, index) => (
-            <option key={index} value={option.label}>
+            <option key={index} value={option.value !== undefined ? option.value : option.label}>
               {option.label}
             </option>
           ))}

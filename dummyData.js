@@ -1392,3 +1392,26 @@ export const deviceCategories = [
     device: "Hybrid Switch",
   },
 ];
+
+/** User Management: valid tab keys for URL sync */
+export const userManagementValidTabs = ["admins", "enterprise", "endUsers"];
+
+/** User Management: role options and tab mapping for add-admin flow */
+export const userManagementRoleOptions = [
+  { value: "admin", label: "Admin" },
+  { value: "enterprise", label: "Enterprise" },
+  { value: "end-user", label: "End User" },
+];
+
+export const userManagementRoleToTab = {
+  admin: "admins",
+  enterprise: "enterprise",
+  "end-user": "endUsers",
+};
+
+/** Per-tab add button config: tab key -> { role, label } */
+export const userManagementAddButtonByTab = {
+  admins: { role: "admin", label: "Add Admin" },
+  enterprise: { role: "enterprise", label: "Add Enterprise" },
+  endUsers: { role: "end-user", label: "Add End User" },
+};

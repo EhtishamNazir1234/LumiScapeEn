@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import SearchField from "../../common/SearchField";
 import Filters from "../../common/Filters";
 import { IoEyeOutline } from "react-icons/io5";
 import { RiDeleteBin6Line } from "react-icons/ri";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import DeleteModal from "../../common/DeleteModal";
 import ViewModal from "../../common/ViewModal";
 import archivedIcon from "../../assets/archived.svg";
 import Tooltip from "../../common/Toltip";
 import FilterCanvasBar from "./FilterCanvasBar";
 import { userService } from "../../services/user.service";
+import { userManagementAddButtonByTab, userManagementValidTabs } from "../../../dummyData";
 
 const UserManagement = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isFilterBarOpen, setIsFilterBarOpen] = useState(false);
@@ -33,8 +35,8 @@ const UserManagement = () => {
     return null;
   };
 
-  // Fetch users from API
-  const fetchUsers = async () => {
+  // Fetch users from API (realtime: refetches when tab or search changes, and when returning from add page)
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const role = getRoleFilter();
@@ -50,7 +52,7 @@ const UserManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, searchQuery]);
 
   useEffect(() => {
     try {
@@ -66,9 +68,25 @@ const UserManagement = () => {
     }
   }, []);
 
+  const tabFromUrl = searchParams.get("tab");
+  useEffect(() => {
+    if (tabFromUrl && userManagementValidTabs.includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
+
   useEffect(() => {
     fetchUsers();
-  }, [activeTab, searchQuery]);
+  }, [fetchUsers]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", tab);
+      return next;
+    });
+  };
 
   const handleDelete = async () => {
     if (!userToDelete) return;
@@ -98,7 +116,7 @@ const UserManagement = () => {
       const userDetails = await userService.getById(user._id);
       setViewData({
         modalTitle: "User Details",
-        userId: userDetails.userId || userDetails._id,
+        userId: String(userDetails.userId || userDetails._id || "").replace(/^User/i, ""),
         name: userDetails.name,
         email: userDetails.email,
         phone: userDetails.phone || "N/A",
@@ -122,7 +140,7 @@ const UserManagement = () => {
                 className={`flex-1 py-1 cursor-pointer rounded-lg box-shadow ${
                   activeTab === "admins" ? "bg-[#337FBA] text-white" : ""
                 }`}
-                onClick={() => setActiveTab("admins")}
+                onClick={() => handleTabChange("admins")}
               >
                 Admins
               </button>
@@ -132,7 +150,7 @@ const UserManagement = () => {
               className={`flex-1 py-1 cursor-pointer rounded-lg box-shadow ${
                 activeTab === "enterprise" ? "bg-[#337FBA] text-white" : ""
               }`}
-              onClick={() => setActiveTab("enterprise")}
+              onClick={() => handleTabChange("enterprise")}
             >
               Enterprise
             </button>
@@ -140,18 +158,18 @@ const UserManagement = () => {
               className={`flex-1 py-1 cursor-pointer rounded-lg box-shadow ${
                 activeTab === "endUsers" ? "bg-[#337FBA] text-white" : ""
               }`}
-              onClick={() => setActiveTab("endUsers")}
+              onClick={() => handleTabChange("endUsers")}
             >
               End Users
             </button>
           </div>
-          {userRole == "super-admin" && (
+          {userRole == "super-admin" && userManagementAddButtonByTab[activeTab] && (
             <div className="flex justify-end md:w-[23%] w-full">
               <button
-                onClick={() => navigate("/add-admin")}
+                onClick={() => navigate(`/add-admin?role=${userManagementAddButtonByTab[activeTab].role}`)}
                 className="custom-shadow-button font-vivita whitespace-nowrap !py-3 !px-6 md:!w-full !w-[50%]"
               >
-                Add New Admin
+                {userManagementAddButtonByTab[activeTab].label}
               </button>
             </div>
           )}
@@ -209,7 +227,7 @@ const UserManagement = () => {
                         {user.phone || "N/A"}
                       </td>
                       <td className="py-3 px-4 text-sm font-light">
-                        {user.userId || user._id}
+                        {String(user.userId || user._id || "").replace(/^User/i, "")}
                       </td>
                       {activeTab === "admins" && (
                         <td className="py-3 px-4 text-sm font-light">
