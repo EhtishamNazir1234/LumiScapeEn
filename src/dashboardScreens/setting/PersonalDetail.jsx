@@ -17,6 +17,7 @@ const PersonalDetail = () => {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [pendingProfileImage, setPendingProfileImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
@@ -27,6 +28,8 @@ const PersonalDetail = () => {
       setLastName(last);
       setEmail(user.email || "");
       setPhone(user.phone || "");
+      // When user data changes (e.g. after successful update), clear local draft image
+      setPendingProfileImage(null);
     }
   }, [user]);
 
@@ -46,7 +49,15 @@ const PersonalDetail = () => {
         setLoading(false);
         return;
       }
-      await updateProfile({ name, email: email.trim(), phone: (phone || "").trim() });
+      const payload = {
+        name,
+        email: email.trim(),
+        phone: (phone || "").trim(),
+      };
+      if (pendingProfileImage) {
+        payload.profileImage = pendingProfileImage;
+      }
+      await updateProfile(payload);
       setMessage({ type: "success", text: "Profile updated successfully." });
     } catch (err) {
       const text = err.response?.data?.message || err.message || "Failed to update profile.";
@@ -62,13 +73,14 @@ const PersonalDetail = () => {
         <div className="mb-[3rem]">
           <div className="mb-10">
             <ImageUploader
-              value={user?.profileImage}
+              value={pendingProfileImage || user?.profileImage}
               onChange={async (dataUrl) => {
                 try {
+                  // Prepare a lightweight, compressed preview; only saved when user presses "Update Details"
                   const compressed = await compressImage(dataUrl, 400, 0.82);
-                  await updateProfile({ profileImage: compressed });
+                  setPendingProfileImage(compressed);
                 } catch {
-                  setMessage({ type: "error", text: "Failed to update profile photo." });
+                  setMessage({ type: "error", text: "Failed to process profile photo." });
                 }
               }}
             />
