@@ -22,6 +22,7 @@ import Tariff from "./dashboardScreens/Tariff/index.jsx";
 import RolesManagement from "./dashboardScreens/roleManagement/index.jsx";
 import NewRole from "./dashboardScreens/roleManagement/NewRole.jsx";
 import DeviceManagement from "./dashboardScreens/deviceManagement/index.jsx";
+import AddDevice from "./dashboardScreens/deviceManagement/AddDevice.jsx";
 import SystemAnalytics from "./dashboardScreens/systemAnalytics/Index.jsx";
 import Reports from "./dashboardScreens/enterpriseDashboard/reports/Index.jsx";
 import GenerateNewReports from "./dashboardScreens/enterpriseDashboard/reports/GenerateReport.jsx";
@@ -181,6 +182,8 @@ function AppRoutes() {
           }
         />
         <Route path="/device-management" element={<DeviceManagement />} />
+        <Route path="/add-device" element={<AddDevice />} />
+        <Route path="/update-device/:id" element={<AddDevice />} />
         <Route path="/settings" element={<Setting />} />
         <Route path="/personal-detail" element={<PersonalDetail />} />
         <Route path="/change-password" element={<ChangePassword />} />

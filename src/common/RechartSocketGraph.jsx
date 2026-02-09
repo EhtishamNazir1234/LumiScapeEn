@@ -6,11 +6,23 @@ import {
   CartesianGrid,
   ResponsiveContainer,
 } from "recharts";
-import { graphData } from "../../dummyData";
+import { graphData as defaultGraphData } from "../../dummyData";
 
-const DeviceManagementSocketGraph = () => {
-  const barKeys = Object.keys(graphData[0]).filter((key) => key !== "week");
-  
+const DeviceManagementSocketGraph = ({ data: dataProp, selectedTime, selectedDeviceName }) => {
+  const graphData = dataProp && dataProp.length > 0 ? dataProp : defaultGraphData;
+  const firstRow = graphData[0] || {};
+  const barKeys = Object.keys(firstRow).filter((key) => key !== "week");
+
+  const allValues = graphData.flatMap((row) =>
+    barKeys.map((k) => (typeof row[k] === "number" ? row[k] : 0))
+  );
+  const maxVal = allValues.length ? Math.max(...allValues) : 1500;
+  const step = maxVal <= 500 ? 100 : maxVal <= 2000 ? 500 : 1000;
+  const topTick = Math.ceil(maxVal / step) * step;
+  const ticks = [0, ...Array.from({ length: Math.ceil(topTick / step) }, (_, i) => (i + 1) * step)].filter(
+    (t) => t <= topTick + step
+  );
+
   return (
     <ResponsiveContainer width="100%" height={320}>
       <BarChart data={graphData} barCategoryGap={12} barGap={2}>
@@ -25,16 +37,9 @@ const DeviceManagementSocketGraph = () => {
           axisLine={{ stroke: "#669FCB", strokeWidth: 0 }}
           tickLine={false}
           tick={{ fill: "#669FCB", fontFamily: "Vivita", fontSize: 16 }}
-          ticks={[0, 100, 500, 1000, 1500]}
-          tickFormatter={(v) => `${v} Kwh`}
+          ticks={ticks.length ? ticks : [0, 100, 500, 1000, 1500]}
+          tickFormatter={(v) => `${v} kWh`}
         />
-        {/* <Tooltip
-          contentStyle={{
-            background: "transparent",
-            border: "none",
-            boxShadow: "none",
-          }}
-        /> */}
         {barKeys.map((key) => (
           <Bar
             key={key}

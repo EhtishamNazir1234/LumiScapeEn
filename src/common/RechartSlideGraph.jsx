@@ -7,17 +7,16 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { data } from "../../dummyData";
+import { data as defaultData } from "../../dummyData";
 
-
-const DeviceManagemenyGraph = () => {
+const DeviceManagemenyGraph = ({ data: dataProp }) => {
+  const data = dataProp && dataProp.length > 0 ? dataProp : defaultData;
   const xKey = "name";
-  const yKey = Object.keys(data[0]).find((key) => key !== "name" && key !== "fill");
+  const yKey = Object.keys(data[0] || {}).find((key) => key !== "name" && key !== "fill") || "value";
 
-  // Max value in the data
-  const maxValue = Math.max(...data.map((d) => d[yKey]));
+  const values = data.map((d) => d[yKey]).filter((v) => typeof v === "number");
+  const maxValue = values.length ? Math.max(...values) : 100;
 
-  // Dynamically determine step size based on maxValue
   let step;
   if (maxValue <= 200) step = 50;
   else if (maxValue <= 1000) step = 100;
@@ -25,8 +24,6 @@ const DeviceManagemenyGraph = () => {
   else step = 1000;
 
   const roundedMax = Math.ceil(maxValue / step) * step;
-
-  // Generate ticks: 0, step, 2*step, ..., roundedMax
   const ticks = Array.from({ length: Math.ceil(roundedMax / step) + 1 }, (_, i) => i * step);
 
   return (

@@ -55,6 +55,38 @@ router.get('/', async (req, res) => {
   }
 });
 
+// @route   GET /api/devices/stats/overview (must be before /:id)
+// @desc    Get device statistics
+// @access  Private
+router.get('/stats/overview', async (req, res) => {
+  try {
+    const totalDevices = await Device.countDocuments();
+    const onlineDevices = await Device.countDocuments({ status: 'Online' });
+    const offlineDevices = await Device.countDocuments({ status: 'Offline' });
+    const maintenanceDevices = await Device.countDocuments({ status: 'Maintenance' });
+
+    const categoryStats = await Device.aggregate([
+      {
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    res.json({
+      totalDevices,
+      onlineDevices,
+      offlineDevices,
+      maintenanceDevices,
+      categoryStats
+    });
+  } catch (error) {
+    console.error('Get device stats error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   GET /api/devices/:id
 // @desc    Get single device
 // @access  Private
@@ -156,38 +188,6 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Device deleted successfully' });
   } catch (error) {
     console.error('Delete device error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// @route   GET /api/devices/stats/overview
-// @desc    Get device statistics
-// @access  Private
-router.get('/stats/overview', async (req, res) => {
-  try {
-    const totalDevices = await Device.countDocuments();
-    const onlineDevices = await Device.countDocuments({ status: 'Online' });
-    const offlineDevices = await Device.countDocuments({ status: 'Offline' });
-    const maintenanceDevices = await Device.countDocuments({ status: 'Maintenance' });
-
-    const categoryStats = await Device.aggregate([
-      {
-        $group: {
-          _id: '$category',
-          count: { $sum: 1 }
-        }
-      }
-    ]);
-
-    res.json({
-      totalDevices,
-      onlineDevices,
-      offlineDevices,
-      maintenanceDevices,
-      categoryStats
-    });
-  } catch (error) {
-    console.error('Get device stats error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

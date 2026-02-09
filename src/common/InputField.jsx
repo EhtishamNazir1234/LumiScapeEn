@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { EyeIcon } from '../assets/icon.jsx';
 
-const InputField = ({ label, id, type = 'text', placeholder, value, onChange, rounded, color = '#0060A9' }) => {
+const InputField = ({ label, id, type = 'text', placeholder, value, onChange, rounded, color = '#0060A9', disabled }) => {
   const isPassword = type === 'password';
   const [showPassword, setShowPassword] = useState(false);
   const inputType = isPassword && showPassword ? 'text' : type;
@@ -20,7 +20,8 @@ const InputField = ({ label, id, type = 'text', placeholder, value, onChange, ro
           placeholder={placeholder}
           value={value}
           onChange={onChange}
-          className={`w-full ${rounded ? "rounded-4xl" : "rounded-lg"} bg-white px-4 py-2 text-gray-700 ${isPassword ? "pr-10" : ""}`}
+          disabled={disabled}
+          className={`w-full ${rounded ? "rounded-4xl" : "rounded-lg"} bg-white px-4 py-2 text-gray-700 ${isPassword ? "pr-10" : ""} ${disabled ? "opacity-70 cursor-not-allowed" : ""}`}
           style={{ boxShadow: 'inset 2px 3px 5px rgba(0, 0, 0, 0.15)' }}
         />
         {isPassword && (
