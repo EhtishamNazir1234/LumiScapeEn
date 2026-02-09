@@ -12,28 +12,46 @@ router.use(protect);
 // @access  Private
 router.get('/', async (req, res) => {
   try {
-    const { city, country, search, page = 1, limit = 10 } = req.query;
-    
-    const query = { status: { $ne: 'Archived' } };
-    
+    const { city, country, search, itemsSupplied, page = 1, limit = 10 } = req.query;
+
+    const conditions = [{ status: { $ne: 'Archived' } }];
+
     if (city) {
-      query.city = { $regex: city, $options: 'i' };
-    }
-    
-    if (country) {
-      query.country = { $regex: country, $options: 'i' };
-    }
-    
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { supplierId: { $regex: search, $options: 'i' } }
-      ];
+      const cities = city.split(',').map((c) => c.trim()).filter(Boolean);
+      if (cities.length > 1) {
+        conditions.push({
+          $or: cities.map((c) => ({ city: { $regex: c, $options: 'i' } })),
+        });
+      } else if (cities.length === 1) {
+        conditions.push({ city: { $regex: cities[0], $options: 'i' } });
+      }
     }
 
+    if (country) {
+      conditions.push({ country: { $regex: country, $options: 'i' } });
+    }
+
+    if (search) {
+      conditions.push({
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+          { supplierId: { $regex: search, $options: 'i' } },
+        ],
+      });
+    }
+
+    if (itemsSupplied) {
+      const items = itemsSupplied.split(',').map((i) => i.trim()).filter(Boolean);
+      if (items.length > 0) {
+        conditions.push({ itemsSupplied: { $in: items } });
+      }
+    }
+
+    const query = conditions.length > 1 ? { $and: conditions } : conditions[0];
+
     const skip = (page - 1) * limit;
-    
+
     const suppliers = await Supplier.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -138,21 +156,17 @@ router.put('/:id', authorize('super-admin', 'admin'), [
 });
 
 // @route   DELETE /api/suppliers/:id
-// @desc    Delete supplier
+// @desc    Permanently delete supplier
 // @access  Private (Admin/Super-admin)
 router.delete('/:id', authorize('super-admin', 'admin'), async (req, res) => {
   try {
-    const supplier = await Supplier.findByIdAndUpdate(
-      req.params.id,
-      { status: 'Archived' },
-      { new: true }
-    );
+    const supplier = await Supplier.findByIdAndDelete(req.params.id);
 
     if (!supplier) {
       return res.status(404).json({ message: 'Supplier not found' });
     }
 
-    res.json({ message: 'Supplier archived successfully', supplier });
+    res.json({ message: 'Supplier deleted successfully' });
   } catch (error) {
     console.error('Delete supplier error:', error);
     res.status(500).json({ message: 'Server error' });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import SearchField from "../../common/SearchField";
 import Filters from "../../common/Filters";
 import { IoEyeOutline } from "react-icons/io5";
@@ -23,14 +23,51 @@ const SupplierManagement = () => {
   const [supplierToDelete, setSupplierToDelete] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewData, setViewData] = useState(null);
+  const silentRefetchRef = useRef(false);
+
+  const highlightMatch = (value) => {
+    const text = String(value ?? "");
+    const query = searchQuery.trim();
+    if (!query) return text;
+
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    const result = [];
+    let start = 0;
+
+    while (true) {
+      const index = lowerText.indexOf(lowerQuery, start);
+      if (index === -1) {
+        if (start === 0) {
+          // no match at all
+          return text;
+        }
+        result.push(text.slice(start));
+        break;
+      }
+      if (index > start) {
+        result.push(text.slice(start, index));
+      }
+      result.push(
+        <span key={index} className="bg-yellow-200">
+          {text.slice(index, index + query.length)}
+        </span>
+      );
+      start = index + query.length;
+    }
+
+    return result;
+  };
 
   const fetchSuppliers = async () => {
     try {
-      setLoading(true);
+      if (!silentRefetchRef.current) setLoading(true);
+      else silentRefetchRef.current = false;
       const params = {};
-      if (searchQuery) params.search = searchQuery;
+      if (searchQuery?.trim()) params.search = searchQuery.trim();
       if (filtersCities.length > 0) params.city = filtersCities.join(",");
-      
+      if (filterSupplieditems.length > 0) params.itemsSupplied = filterSupplieditems.join(",");
+
       const response = await supplierService.getAll(params);
       setSuppliers(response.suppliers || response || []);
     } catch (error) {
@@ -43,7 +80,7 @@ const SupplierManagement = () => {
 
   useEffect(() => {
     fetchSuppliers();
-  }, [searchQuery, filtersCities]);
+  }, [searchQuery, filtersCities, filterSupplieditems]);
 
   const handleDelete = async () => {
     if (!supplierToDelete) return;
@@ -61,11 +98,16 @@ const SupplierManagement = () => {
   const handleView = async (supplier) => {
     try {
       const supplierDetails = await supplierService.getById(supplier._id);
+      const fullName = (supplierDetails.name || "").trim();
+      const nameParts = fullName ? fullName.split(/\s+/) : [];
+      const lastNameOnly =
+        nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
       setViewData({
         modalTitle: "Supplier Details",
+        _id: supplierDetails._id,
         supplierId: supplierDetails.supplierId || supplierDetails._id,
-        name: supplierDetails.name,
-        lastName: supplierDetails.lastName || "",
+        name: fullName,
+        lastName: lastNameOnly,
         email: supplierDetails.email,
         phone: supplierDetails.phone || "N/A",
         city: supplierDetails.city || "N/A",
@@ -76,6 +118,19 @@ const SupplierManagement = () => {
     } catch (error) {
       console.error("Error fetching supplier details:", error);
       alert("Failed to load supplier details.");
+    }
+  };
+
+  const handleRemoveFromView = async () => {
+    if (!viewData || !viewData._id) return;
+    try {
+      await supplierService.delete(viewData._id);
+      setIsViewModalOpen(false);
+      setViewData(null);
+      fetchSuppliers();
+    } catch (error) {
+      console.error("Error deleting supplier from view modal:", error);
+      alert("Failed to delete supplier. Please try again.");
     }
   };
   return (
@@ -130,22 +185,22 @@ const SupplierManagement = () => {
                       className="border-b-[1px] border-[#DEDFE0] last:border-0"
                     >
                       <td className="py-4 px-4 text-sm font-light ">
-                        {supplier.name}
+                        {highlightMatch(supplier.name)}
                       </td>
                       <td className="py-4 px-4 text-sm font-light">
-                        {supplier.supplierId || supplier._id}
+                        {highlightMatch(supplier.supplierId || supplier._id)}
                       </td>
                       <td className="py-4 font-light text-sm">
-                        {supplier.email}
+                        {highlightMatch(supplier.email)}
                       </td>
                       <td className="py-4 px-4 text-sm font-light">
-                        {supplier.phone || "N/A"}
+                        {highlightMatch(supplier.phone || "N/A")}
                       </td>
                       <td className="py-4 px-4 text-sm font-light">
-                        {supplier.city || "N/A"}
+                        {highlightMatch(supplier.city || "N/A")}
                       </td>
                       <td className="py-4 px-4 text-sm font-light">
-                        {supplier.country || "N/A"}
+                        {highlightMatch(supplier.country || "N/A")}
                       </td>
                       <td className="py-4 px-4 font-light flex justify-center gap-3">
                         <MdOutlineEdit
@@ -183,6 +238,7 @@ const SupplierManagement = () => {
             setViewData(null);
           }}
           viewData={viewData}
+          onRemove={handleRemoveFromView}
         />
         <DeleteModal
           isOpen={isDeleteModalOpen}
@@ -200,7 +256,12 @@ const SupplierManagement = () => {
           filtersCities={filtersCities}
           setFilterSupplieditems={setFilterSupplieditems}
           filterSupplieditems={filterSupplieditems}
-          onClose={() => setIsFilterBarOpen(false)}
+          onClose={() => {
+            silentRefetchRef.current = true;
+            setFiltersCities([]);
+            setFilterSupplieditems([]);
+            setIsFilterBarOpen(false);
+          }}
         />
       )}
     </div>

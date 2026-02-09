@@ -1,7 +1,7 @@
 import React from "react";
 import { RxCross2 } from "react-icons/rx";
 
-const ViewModal = ({ isOpen, onClose, viewData }) => {
+const ViewModal = ({ isOpen, onClose, viewData, onRemove }) => {
   if (!isOpen) return null;
 
   return (
@@ -53,9 +53,14 @@ const ViewModal = ({ isOpen, onClose, viewData }) => {
             >
               Cancel
             </button>
-            <button className="w-[200px] py-3 bg-red-600 text-white rounded-4xl cursor-pointer">
-              Remove
-            </button>
+            {onRemove && (
+              <button
+                className="w-[200px] py-3 bg-red-600 text-white rounded-4xl cursor-pointer"
+                onClick={onRemove}
+              >
+                Remove
+              </button>
+            )}
           </div>
         </div>
       </div>

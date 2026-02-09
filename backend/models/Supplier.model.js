@@ -43,10 +43,11 @@ const supplierSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Generate supplierId if not provided
+// Generate supplierId if not provided (use first name + timestamp)
 supplierSchema.pre('save', async function(next) {
   if (!this.supplierId) {
-    this.supplierId = `Brume-${Date.now()}`;
+    const first = (this.name || '').trim().split(/\s+/)[0];
+    this.supplierId = `${first || 'Supplier'}-${Date.now()}`;
   }
   next();
 });
