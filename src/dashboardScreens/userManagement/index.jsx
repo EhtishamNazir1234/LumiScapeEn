@@ -26,6 +26,16 @@ const UserManagement = () => {
   const [userToDelete, setUserToDelete] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewData, setViewData] = useState(null);
+  const [statusFilters, setStatusFilters] = useState({
+    active: true,
+    inactive: true,
+  });
+  const [planFilters, setPlanFilters] = useState({
+    Basic: false,
+    Standard: false,
+    Premium: false,
+  });
+  const [showArchived, setShowArchived] = useState(false);
 
   // Map activeTab to role filter
   const getRoleFilter = () => {
@@ -111,6 +121,85 @@ const UserManagement = () => {
     }
   };
 
+  // Derive end user status primarily from explicit status,
+  // and use lastLogin only to distinguish never-logged-in users.
+  const getEndUserStatus = (user) => {
+    // Respect archived state explicitly
+    if (user.status === "Archived") {
+      return "Archived";
+    }
+
+    // If admin has explicitly marked user as Inactive, keep it
+    if (user.status === "Inactive") {
+      return "Inactive";
+    }
+
+    // For "Active" users:
+    // - If they have never logged in, treat as Inactive
+    // - If they have logged in at least once, treat as Active
+    if (!user.lastLogin) {
+      return "Inactive";
+    }
+
+    return "Active";
+  };
+
+  const getFilteredUsers = () => {
+    let result = Array.isArray(users) ? [...users] : [];
+
+    // Archived filter
+    result = result.filter((user) => {
+      const isArchived = user.status === "Archived";
+      if (!showArchived && isArchived) {
+        return false;
+      }
+      return true;
+    });
+
+    // Status filters (Active / Inactive)
+    const hasStatusFilter = statusFilters.active || statusFilters.inactive;
+    if (hasStatusFilter) {
+      result = result.filter((user) => {
+        if (activeTab === "endUsers") {
+          // For end users, derive status from login activity
+          const derivedStatus = getEndUserStatus(user); // "Active" | "Inactive" | "Archived"
+
+          return (
+            (statusFilters.active && derivedStatus === "Active") ||
+            (statusFilters.inactive && derivedStatus === "Inactive") ||
+            derivedStatus === "Archived"
+          );
+        }
+
+        const isActive = user.status === "Active";
+        const isInactive = user.status === "Inactive";
+
+        return (
+          (statusFilters.active && isActive) ||
+          (statusFilters.inactive && isInactive) ||
+          (!isActive && !isInactive && user.status !== "Archived")
+        );
+      });
+    }
+
+    // Plan filters only for End Users
+    if (activeTab === "endUsers") {
+      const selectedPlans = Object.entries(planFilters)
+        .filter(([, value]) => value)
+        .map(([key]) => key);
+
+      if (selectedPlans.length > 0) {
+        result = result.filter((user) =>
+          selectedPlans.includes(user.subscription)
+        );
+      }
+    }
+
+    return result;
+  };
+
+  const filteredUsers = getFilteredUsers();
+
   const handleView = async (user) => {
     try {
       const userDetails = await userService.getById(user._id);
@@ -192,7 +281,7 @@ const UserManagement = () => {
           <div className="overflow-x-auto my-7">
             {loading ? (
               <div className="text-center py-8">Loading...</div>
-            ) : users.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <div className="text-center py-8">No users found</div>
             ) : (
               <table className="w-full">
@@ -212,7 +301,7 @@ const UserManagement = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user, index) => (
+                  {filteredUsers.map((user, index) => (
                     <tr
                       key={user._id || index}
                       className="border-b-[1px] border-[#DEDFE0] last:border-0"
@@ -237,15 +326,21 @@ const UserManagement = () => {
                       {activeTab === "endUsers" && (
                         <td
                           className={`py-3 px-4 text-sm font-light ${
-                            user.status === "Archived" || user.status === "Expire" ? "text-red-600" : ""
+                            getEndUserStatus(user) === "Archived" ? "text-red-600" : ""
                           }`}
                         >
-                          {user.status || "Active"}
+                          {getEndUserStatus(user)}
                         </td>
                       )}
 
                       <td className="py-3 px-4 font-light flex justify-center gap-3">
-                        <Tooltip tooltipContent="Archive User">
+                        <Tooltip
+                          tooltipContent={
+                            user.status === "Archived"
+                              ? "Unarchive User"
+                              : "Archive User"
+                          }
+                        >
                           <img 
                             src={archivedIcon} 
                             width={19} 
@@ -300,6 +395,12 @@ const UserManagement = () => {
       {isFilterBarOpen && (
         <FilterCanvasBar
           activeTab={activeTab}
+          statusFilters={statusFilters}
+          setStatusFilters={setStatusFilters}
+          planFilters={planFilters}
+          setPlanFilters={setPlanFilters}
+          showArchived={showArchived}
+          setShowArchived={setShowArchived}
           onClose={() => setIsFilterBarOpen(false)}
         />
       )}

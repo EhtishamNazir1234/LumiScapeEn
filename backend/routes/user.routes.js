@@ -168,21 +168,31 @@ router.put('/:id', [
 });
 
 // @route   PUT /api/users/:id/archive
-// @desc    Archive user
+// @desc    Toggle archive status for user
 // @access  Private (Admin/Super-admin)
 router.put('/:id/archive', authorize('super-admin', 'admin'), async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { status: 'Archived' },
-      { new: true }
-    ).select('-password');
+    const existingUser = await User.findById(req.params.id).select('-password');
 
-    if (!user) {
+    if (!existingUser) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.json({ message: 'User archived successfully', user });
+    const newStatus = existingUser.status === 'Archived' ? 'Active' : 'Archived';
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { status: newStatus },
+      { new: true }
+    ).select('-password');
+
+    res.json({
+      message:
+        newStatus === 'Archived'
+          ? 'User archived successfully'
+          : 'User unarchived successfully',
+      user,
+    });
   } catch (error) {
     console.error('Archive user error:', error);
     res.status(500).json({ message: 'Server error' });
