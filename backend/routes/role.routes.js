@@ -12,7 +12,7 @@ router.use(protect);
 // @access  Private (Admin/Super-admin)
 router.get('/', authorize('super-admin', 'admin'), async (req, res) => {
   try {
-    const roles = await Role.find({ isActive: true }).sort({ createdAt: -1 });
+    const roles = await Role.find({ isActive: true }).sort({ createdAt: 1 });
     res.json(roles);
   } catch (error) {
     console.error('Get roles error:', error);
