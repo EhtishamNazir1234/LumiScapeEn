@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import Chips from "../../common/Chips";
 import InputField from "../../common/InputField";
 import { suppliedItems } from "../../../dummyData";
@@ -9,6 +9,8 @@ const AddSupplier = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
+  const location = useLocation();
+  const supplierFromState = location.state?.supplier;
 
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
@@ -25,35 +27,50 @@ const AddSupplier = () => {
   useEffect(() => {
     if (!isEdit || !id) return;
     let cancelled = false;
+
+    const populateFromData = (data) => {
+      const nameStr = (data.name || "").trim();
+      const parts = nameStr ? nameStr.split(/\s+/) : [];
+      if (parts.length >= 2) {
+        setFirstName(parts[0] || "");
+        setLastName(parts[parts.length - 1] || "");
+        setMiddleName(parts.slice(1, -1).join(" ") || "");
+      } else if (parts.length === 1) {
+        setFirstName(parts[0] || "");
+      }
+      setEmail(data.email || "");
+      setPhone(data.phone || "");
+      setCity(data.city || "");
+      setCountry(data.country || "");
+      const supplied = data.itemsSupplied || [];
+      const chips = supplied
+        .map((s) => {
+          const item = suppliedItems.find(
+            (i) => i.label === s || String(i.id) === s
+          );
+          return item || (s ? { id: s, label: s } : null);
+        })
+        .filter(Boolean);
+      setSelectedChips(chips);
+    };
+
+    // Prefer using data passed via navigation state to avoid refetch
+    if (supplierFromState) {
+      setFormLoading(false);
+      setError("");
+      populateFromData(supplierFromState);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const load = async () => {
       try {
         setFormLoading(true);
         setError("");
         const data = await supplierService.getById(id);
         if (cancelled) return;
-        const nameStr = (data.name || "").trim();
-        const parts = nameStr ? nameStr.split(/\s+/) : [];
-        if (parts.length >= 2) {
-          setFirstName(parts[0] || "");
-          setLastName(parts[parts.length - 1] || "");
-          setMiddleName(parts.slice(1, -1).join(" ") || "");
-        } else if (parts.length === 1) {
-          setFirstName(parts[0] || "");
-        }
-        setEmail(data.email || "");
-        setPhone(data.phone || "");
-        setCity(data.city || "");
-        setCountry(data.country || "");
-        const supplied = data.itemsSupplied || [];
-        const chips = supplied
-          .map((s) => {
-            const item = suppliedItems.find(
-              (i) => i.label === s || String(i.id) === s
-            );
-            return item || (s ? { id: s, label: s } : null);
-          })
-          .filter(Boolean);
-        setSelectedChips(chips);
+        populateFromData(data);
       } catch (err) {
         if (!cancelled) {
           const msg =
@@ -68,7 +85,7 @@ const AddSupplier = () => {
     };
     load();
     return () => { cancelled = true; };
-  }, [id, isEdit]);
+  }, [id, isEdit, supplierFromState]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

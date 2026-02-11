@@ -299,23 +299,19 @@ const UserManagement = () => {
     });
   };
 
-  const handleView = async (user) => {
-    try {
-      const userDetails = await userService.getById(user._id);
-      setViewData({
-        modalTitle: "User Details",
-        userId: String(userDetails.userId || userDetails._id || "").replace(/^User/i, ""),
-        name: userDetails.name,
-        email: userDetails.email,
-        phone: userDetails.phone || "N/A",
-        role: userDetails.role,
-        lastLogin: userDetails.lastLogin || "N/A",
-      });
-      setIsViewModalOpen(true);
-    } catch (error) {
-      console.error("Error fetching user details:", error);
-      alert("Failed to load user details.");
-    }
+  const handleView = (user) => {
+    // Avoid extra API calls – use already loaded list data
+    const safeUser = user || {};
+    setViewData({
+      modalTitle: "User Details",
+      userId: String(safeUser.userId || safeUser._id || "").replace(/^User/i, ""),
+      name: safeUser.name || "N/A",
+      email: safeUser.email || "N/A",
+      phone: safeUser.phone || "N/A",
+      role: safeUser.role || "N/A",
+      lastLogin: safeUser.lastLogin || "N/A",
+    });
+    setIsViewModalOpen(true);
   };
 
   return (

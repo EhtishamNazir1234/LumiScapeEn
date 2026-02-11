@@ -118,43 +118,26 @@ const DeviceManagementTable = ({
     }
   };
 
-  const handleViewClick = async (device) => {
-    try {
-      const deviceDetails = await deviceService.getById(device._id);
-      setSelectedDevice({
-        modalTitle: "Device Details",
-        _id: deviceDetails._id,
-        "Device ID": deviceDetails.deviceId || deviceDetails._id,
-        "Device name": deviceDetails.name,
-        "Serial No.": deviceDetails.serial,
-        Category: deviceDetails.category,
-        Type: deviceDetails.type,
-        Variant: deviceDetails.variant || "N/A",
-        "Installation date": deviceDetails.createdAt
-          ? new Date(deviceDetails.createdAt).toLocaleDateString()
-          : "N/A",
-        Status: deviceDetails.status || "N/A",
-        "Assigned To": deviceDetails.assignedTo?.name || "Not assigned",
-        Location: formatLocation(deviceDetails.location),
-      });
-      setIsModalOpen(true);
-    } catch (error) {
-      console.error("Error fetching device details:", error);
-      setSelectedDevice({
-        modalTitle: "Device Details",
-        _id: device._id,
-        "Device name": device.name,
-        "Serial No.": device.serial,
-        Category: device.category,
-        Type: device.type,
-        Variant: device.variant || "N/A",
-        "Installation date": device.createdAt
-          ? new Date(device.createdAt).toLocaleDateString()
-          : "N/A",
-        Status: device.status || "N/A",
-      });
-      setIsModalOpen(true);
-    }
+  const handleViewClick = (device) => {
+    // Use data already loaded in the list to avoid an extra API call
+    const d = device || {};
+    setSelectedDevice({
+      modalTitle: "Device Details",
+      _id: d._id,
+      "Device ID": d.deviceId || d._id,
+      "Device name": d.name,
+      "Serial No.": d.serial,
+      Category: d.category,
+      Type: d.type,
+      Variant: d.variant || "N/A",
+      "Installation date": d.createdAt
+        ? new Date(d.createdAt).toLocaleDateString()
+        : "N/A",
+      Status: d.status || "N/A",
+      "Assigned To": d.assignedTo?.name || "Not assigned",
+      Location: formatLocation(d.location),
+    });
+    setIsModalOpen(true);
   };
 
   const handleRemoveFromView = async () => {
@@ -230,8 +213,12 @@ const DeviceManagementTable = ({
                         : "N/A"}
                     </td>
                     <td className="py-4 px-4 font-light flex justify-center gap-3">
-                      <MdOutlineEdit
-                        onClick={() => navigate(`/update-device/${row._id}`)}
+                    <MdOutlineEdit
+                        onClick={() =>
+                          navigate(`/update-device/${row._id}`, {
+                            state: { device: row },
+                          })
+                        }
                         size={20}
                         className="text-[#0061A9] cursor-pointer"
                       />

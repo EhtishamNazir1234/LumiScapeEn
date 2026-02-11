@@ -95,30 +95,26 @@ const SupplierManagement = () => {
     }
   };
 
-  const handleView = async (supplier) => {
-    try {
-      const supplierDetails = await supplierService.getById(supplier._id);
-      const fullName = (supplierDetails.name || "").trim();
-      const nameParts = fullName ? fullName.split(/\s+/) : [];
-      const lastNameOnly =
-        nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
-      setViewData({
-        modalTitle: "Supplier Details",
-        _id: supplierDetails._id,
-        supplierId: supplierDetails.supplierId || supplierDetails._id,
-        name: fullName,
-        lastName: lastNameOnly,
-        email: supplierDetails.email,
-        phone: supplierDetails.phone || "N/A",
-        city: supplierDetails.city || "N/A",
-        country: supplierDetails.country || "N/A",
-        itemsSupplied: supplierDetails.itemsSupplied || [],
-      });
-      setIsViewModalOpen(true);
-    } catch (error) {
-      console.error("Error fetching supplier details:", error);
-      alert("Failed to load supplier details.");
-    }
+  const handleView = (supplier) => {
+    // Avoid refetching supplier, use list row data
+    const s = supplier || {};
+    const fullName = (s.name || "").trim();
+    const nameParts = fullName ? fullName.split(/\s+/) : [];
+    const lastNameOnly =
+      nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
+    setViewData({
+      modalTitle: "Supplier Details",
+      _id: s._id,
+      supplierId: s.supplierId || s._id,
+      name: fullName || "N/A",
+      lastName: lastNameOnly,
+      email: s.email || "N/A",
+      phone: s.phone || "N/A",
+      city: s.city || "N/A",
+      country: s.country || "N/A",
+      itemsSupplied: s.itemsSupplied || [],
+    });
+    setIsViewModalOpen(true);
   };
 
   const handleRemoveFromView = async () => {
@@ -205,7 +201,9 @@ const SupplierManagement = () => {
                       <td className="py-4 px-4 font-light flex justify-center gap-3">
                         <MdOutlineEdit
                           onClick={() =>
-                            navigate(`/update-supplier/${supplier._id}`)
+                            navigate(`/update-supplier/${supplier._id}`, {
+                              state: { supplier },
+                            })
                           }
                           size={20}
                           className="text-[#0061A9] cursor-pointer"

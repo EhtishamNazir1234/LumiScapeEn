@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import InputField from "../../common/InputField";
 import SelectField from "../../common/SelectField";
 import { deviceService } from "../../services/device.service";
@@ -17,6 +17,8 @@ const AddDevice = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
+  const location = useLocation();
+  const deviceFromState = location.state?.device;
 
   const [name, setName] = useState("");
   const [serial, setSerial] = useState("");
@@ -51,23 +53,38 @@ const AddDevice = () => {
   useEffect(() => {
     if (!isEdit || !id) return;
     let cancelled = false;
+
+    const populateFromData = (data) => {
+      setName(data.name || "");
+      setSerial(data.serial || "");
+      setCategory(data.category || "");
+      setType(data.type || "");
+      setVariant(data.variant || "");
+      const loc = data.location || {};
+      setBuilding(loc.building || "");
+      setFloor(loc.floor || "");
+      setRoom(loc.room || "");
+      setZone(loc.zone || "");
+      setAssignedTo(data.assignedTo?._id || data.assignedTo || "");
+    };
+
+    // Prefer navigation state to avoid extra API call when coming from list
+    if (deviceFromState) {
+      setFormLoading(false);
+      setError("");
+      populateFromData(deviceFromState);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const load = async () => {
       try {
         setFormLoading(true);
         setError("");
         const data = await deviceService.getById(id);
         if (cancelled) return;
-        setName(data.name || "");
-        setSerial(data.serial || "");
-        setCategory(data.category || "");
-        setType(data.type || "");
-        setVariant(data.variant || "");
-        const loc = data.location || {};
-        setBuilding(loc.building || "");
-        setFloor(loc.floor || "");
-        setRoom(loc.room || "");
-        setZone(loc.zone || "");
-        setAssignedTo(data.assignedTo?._id || data.assignedTo || "");
+        populateFromData(data);
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -80,7 +97,7 @@ const AddDevice = () => {
     };
     load();
     return () => { cancelled = true; };
-  }, [id, isEdit]);
+  }, [id, isEdit, deviceFromState]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
