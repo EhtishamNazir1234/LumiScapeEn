@@ -18,6 +18,40 @@ const TicketsAndComplaints = () => {
   const [userList, setUserList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const highlightMatch = (value) => {
+    const text = String(value ?? "");
+    const query = searchQuery.trim();
+    if (!query) return text;
+
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    const result = [];
+    let start = 0;
+
+    while (true) {
+      const index = lowerText.indexOf(lowerQuery, start);
+      if (index === -1) {
+        if (start === 0) {
+          // no match at all
+          return text;
+        }
+        result.push(text.slice(start));
+        break;
+      }
+      if (index > start) {
+        result.push(text.slice(start, index));
+      }
+      result.push(
+        <span key={index} className="bg-yellow-200">
+          {text.slice(index, index + query.length)}
+        </span>
+      );
+      start = index + query.length;
+    }
+
+    return result;
+  };
+
   const fetchTickets = async () => {
     try {
       setLoading(true);
@@ -111,16 +145,22 @@ const TicketsAndComplaints = () => {
                         className="border-b-[1px] border-[#DEDFE0] last:border-0"
                       >
                         <td className="py-4 px-4 text-sm font-light ">
-                          {ticket.ticketNumber || `#${ticket._id.slice(-6)}`}
+                          {highlightMatch(
+                            ticket.ticketNumber || `#${ticket._id.slice(-6)}`
+                          )}
                         </td>
                         <td className="py-4 px-4 text-sm font-light">
-                          {ticket.userName}
+                          {highlightMatch(ticket.userName)}
                         </td>
                         <td className="py-4 px-4 text-sm font-light">
-                          <span>{ticket.type}</span>
+                          <span>{highlightMatch(ticket.type)}</span>
                         </td>
                         <td className="py-4 px-4 text-sm font-light">
-                          {ticket.assignedToName || ticket.assignedTo?.name || "Not assigned"}
+                          {highlightMatch(
+                            ticket.assignedToName ||
+                              ticket.assignedTo?.name ||
+                              "Not assigned"
+                          )}
                         </td>
                         <td className="py-4 px-4 text-sm font-light">
                           {ticket.reportedOn ? new Date(ticket.reportedOn).toLocaleDateString() : 

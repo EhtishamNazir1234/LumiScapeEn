@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import SearchField from "../../common/SearchField";
 import Filters from "../../common/Filters";
 import { IoEyeOutline } from "react-icons/io5";
@@ -24,10 +24,13 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQueries, setSearchQueries] = useState({
+    admins: "",
+    enterprise: "",
+    endUsers: "",
+  });
   const [viewData, setViewData] = useState(null);
   const [statusFilters, setStatusFilters] = useState({
-    active: true,
     inactive: true,
   });
   const [planFilters, setPlanFilters] = useState({
@@ -36,25 +39,12 @@ const UserManagement = () => {
     Premium: false,
   });
   const [showArchived, setShowArchived] = useState(false);
-
-  // Map activeTab to role filter
-  const getRoleFilter = () => {
-    if (activeTab === "admins") return "admin";
-    if (activeTab === "enterprise") return "enterprise";
-    if (activeTab === "endUsers") return "end-user";
-    return null;
-  };
-
-  // Fetch users from API (realtime: refetches when tab or search changes, and when returning from add page)
-  const fetchUsers = useCallback(async () => {
+  const [toastMessage, setToastMessage] = useState("");
+  // Fetch all users once and use client-side filtering for tabs/search/filters
+  const fetchUsers = async () => {
     try {
       setLoading(true);
-      const role = getRoleFilter();
-      const params = {};
-      if (role) params.role = role;
-      if (searchQuery) params.search = searchQuery;
-
-      const response = await userService.getAll(params);
+      const response = await userService.getAll();
       setUsers(response.users || response || []);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -62,7 +52,7 @@ const UserManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, searchQuery]);
+  };
 
   useEffect(() => {
     try {
@@ -87,7 +77,14 @@ const UserManagement = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => setToastMessage(""), 3000);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -147,38 +144,59 @@ const UserManagement = () => {
   const getFilteredUsers = () => {
     let result = Array.isArray(users) ? [...users] : [];
 
-    // Archived filter
-    result = result.filter((user) => {
-      const isArchived = user.status === "Archived";
-      if (!showArchived && isArchived) {
-        return false;
-      }
-      return true;
-    });
+    // First, apply role-based filtering per tab
+    if (activeTab === "admins") {
+      // Show both admin and super-admin roles in Admins tab
+      result = result.filter(
+        (user) => user.role === "admin" || user.role === "super-admin"
+      );
+    } else if (activeTab === "enterprise") {
+      result = result.filter((user) => user.role === "enterprise");
+    } else if (activeTab === "endUsers") {
+      result = result.filter((user) => user.role === "end-user");
+    }
 
-    // Status filters (Active / Inactive)
-    const hasStatusFilter = statusFilters.active || statusFilters.inactive;
-    if (hasStatusFilter) {
+    // Search filter (client-side: name, email, userId/_id), per tab
+    const currentSearch =
+      activeTab && searchQueries[activeTab]
+        ? searchQueries[activeTab]
+        : "";
+    const query = currentSearch.trim().toLowerCase();
+    if (query) {
+      result = result.filter((user) => {
+        const name = (user.name || "").toLowerCase();
+        const email = (user.email || "").toLowerCase();
+        const idStr = String(user.userId || user._id || "").toLowerCase();
+        return (
+          name.includes(query) ||
+          email.includes(query) ||
+          idStr.includes(query)
+        );
+      });
+    }
+
+    // If "Show Archived" is ON, show only archived users for this tab
+    if (showArchived) {
+      result = result.filter((user) => user.status === "Archived");
+    } else {
+      // Otherwise, exclude archived users and control visibility of inactive users.
+      result = result.filter((user) => user.status !== "Archived");
+
+      const showInactive = statusFilters.inactive;
+
       result = result.filter((user) => {
         if (activeTab === "endUsers") {
-          // For end users, derive status from login activity
-          const derivedStatus = getEndUserStatus(user); // "Active" | "Inactive" | "Archived"
+          const derivedStatus = getEndUserStatus(user); // "Active" | "Inactive"
 
-          return (
-            (statusFilters.active && derivedStatus === "Active") ||
-            (statusFilters.inactive && derivedStatus === "Inactive") ||
-            derivedStatus === "Archived"
-          );
+          if (derivedStatus === "Active") return true; // Active users always shown
+          if (derivedStatus === "Inactive") return showInactive;
+          return false;
         }
 
-        const isActive = user.status === "Active";
-        const isInactive = user.status === "Inactive";
-
-        return (
-          (statusFilters.active && isActive) ||
-          (statusFilters.inactive && isInactive) ||
-          (!isActive && !isInactive && user.status !== "Archived")
-        );
+        // For non-end-users, use explicit status
+        if (user.status === "Active") return true; // Active always shown
+        if (user.status === "Inactive") return showInactive;
+        return false;
       });
     }
 
@@ -199,6 +217,87 @@ const UserManagement = () => {
   };
 
   const filteredUsers = getFilteredUsers();
+
+  const highlightMatch = (value) => {
+    const text = String(value ?? "");
+    const currentSearch =
+      activeTab && searchQueries[activeTab]
+        ? searchQueries[activeTab]
+        : "";
+    const query = currentSearch.trim();
+    if (!query) return text;
+
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    const result = [];
+    let start = 0;
+
+    while (true) {
+      const index = lowerText.indexOf(lowerQuery, start);
+      if (index === -1) {
+        if (start === 0) return text;
+        result.push(text.slice(start));
+        break;
+      }
+      if (index > start) {
+        result.push(text.slice(start, index));
+      }
+      result.push(
+        <span key={index} className="bg-yellow-200">
+          {text.slice(index, index + query.length)}
+        </span>
+      );
+      start = index + query.length;
+    }
+
+    return result;
+  };
+
+  const hasUsersWithStatusInCurrentTab = (desiredStatus) => {
+    return users.some((user) => {
+      // Apply tab role filter
+      if (activeTab === "admins") {
+        if (!(user.role === "admin" || user.role === "super-admin")) {
+          return false;
+        }
+      } else if (activeTab === "enterprise") {
+        if (user.role !== "enterprise") return false;
+      } else if (activeTab === "endUsers") {
+        if (user.role !== "end-user") return false;
+      }
+
+      // Respect archived toggle
+      if (!showArchived && user.status === "Archived") {
+        return false;
+      }
+
+      if (activeTab === "endUsers") {
+        const derived = getEndUserStatus(user);
+        return derived === desiredStatus;
+      }
+
+      // For non-end-users, use explicit status; ignore Archived when checking Active/Inactive
+      if (user.status === "Archived") return false;
+      return user.status === desiredStatus;
+    });
+  };
+
+  const setStatusFiltersWithToast = (updater) => {
+    setStatusFilters((prev) => {
+      const next =
+        typeof updater === "function" ? updater(prev) : { ...prev, ...updater };
+
+      // If Inactive just turned on, but there are no inactive users in this tab
+      if (!prev.inactive && next.inactive) {
+        const hasInactive = hasUsersWithStatusInCurrentTab("Inactive");
+        if (!hasInactive) {
+          setToastMessage("No inactive user");
+        }
+      }
+
+      return next;
+    });
+  };
 
   const handleView = async (user) => {
     try {
@@ -271,8 +370,13 @@ const UserManagement = () => {
             <div className="flex gap-3 sm:w-[70%] w-full">
               <SearchField 
                 placeholder="Search" 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchQueries[activeTab] || ""}
+                onChange={(e) =>
+                  setSearchQueries((prev) => ({
+                    ...prev,
+                    [activeTab]: e.target.value,
+                  }))
+                }
               />
               <Filters onClick={() => setIsFilterBarOpen(!isFilterBarOpen)} />
             </div>
@@ -307,16 +411,21 @@ const UserManagement = () => {
                       className="border-b-[1px] border-[#DEDFE0] last:border-0"
                     >
                       <td className="py-3 px-4 text-sm font-light ">
-                        {user.name}
+                        {highlightMatch(user.name)}
                       </td>
                       <td className="py-3 font-light text-sm">
-                        {user.email}
+                        {highlightMatch(user.email)}
                       </td>
                       <td className="py-3 px-4 text-sm font-light">
-                        {user.phone || "N/A"}
+                        {highlightMatch(user.phone || "N/A")}
                       </td>
                       <td className="py-3 px-4 text-sm font-light">
-                        {String(user.userId || user._id || "").replace(/^User/i, "")}
+                        {highlightMatch(
+                          String(user.userId || user._id || "").replace(
+                            /^User/i,
+                            ""
+                          )
+                        )}
                       </td>
                       {activeTab === "admins" && (
                         <td className="py-3 px-4 text-sm font-light">
@@ -396,13 +505,38 @@ const UserManagement = () => {
         <FilterCanvasBar
           activeTab={activeTab}
           statusFilters={statusFilters}
-          setStatusFilters={setStatusFilters}
+          setStatusFilters={setStatusFiltersWithToast}
           planFilters={planFilters}
           setPlanFilters={setPlanFilters}
           showArchived={showArchived}
-          setShowArchived={setShowArchived}
+          setShowArchived={(checked) => {
+            if (checked) {
+              const hasArchivedInTab = users.some((user) => {
+                if (activeTab === "admins") {
+                  if (!(user.role === "admin" || user.role === "super-admin")) {
+                    return false;
+                  }
+                } else if (activeTab === "enterprise") {
+                  if (user.role !== "enterprise") return false;
+                } else if (activeTab === "endUsers") {
+                  if (user.role !== "end-user") return false;
+                }
+                return user.status === "Archived";
+              });
+
+              if (!hasArchivedInTab) {
+                setToastMessage("No archived entity");
+              }
+            }
+            setShowArchived(checked);
+          }}
           onClose={() => setIsFilterBarOpen(false)}
         />
+      )}
+      {toastMessage && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-sm px-4 py-2 rounded shadow-lg z-50">
+          {toastMessage}
+        </div>
       )}
     </div>
   );

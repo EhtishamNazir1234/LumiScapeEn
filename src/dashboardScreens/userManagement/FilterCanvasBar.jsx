@@ -52,12 +52,7 @@ const FilterCanvasBar = ({
           </label>
           <div className="space-y-5">
             <ToggleSwitch
-              label="Active"
-              checked={statusFilters?.active ?? true}
-              onChange={(checked) => handleStatusChange("active", checked)}
-            />
-            <ToggleSwitch
-              label="Inactive"
+              label="Show Inactive"
               checked={statusFilters?.inactive ?? true}
               onChange={(checked) => handleStatusChange("inactive", checked)}
             />
