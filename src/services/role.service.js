@@ -1,8 +1,9 @@
 import api from './api';
 
 const roleListCache = new Map();
+const roleByIdCache = new Map();
 const getKey = (params = {}) => JSON.stringify(params || {});
-const clearRoleCache = () => roleListCache.clear();
+const clearListCache = () => roleListCache.clear();
 
 export const roleService = {
   getAll: async (params = {}) => {
@@ -17,25 +18,36 @@ export const roleService = {
   },
 
   getById: async (id) => {
+    if (!id) return null;
+    if (roleByIdCache.has(id)) {
+      return roleByIdCache.get(id);
+    }
     const response = await api.get(`/roles/${id}`);
-    return response.data;
+    const role = response.data;
+    roleByIdCache.set(id, role);
+    return role;
   },
 
   create: async (payload) => {
     const response = await api.post('/roles', payload);
-    clearRoleCache();
-    return response.data;
+    const role = response.data;
+    clearListCache();
+    if (role?._id) roleByIdCache.set(role._id, role);
+    return role;
   },
 
   update: async (id, payload) => {
     const response = await api.put(`/roles/${id}`, payload);
-    clearRoleCache();
-    return response.data;
+    const role = response.data;
+    clearListCache();
+    if (role?._id) roleByIdCache.set(role._id, role);
+    return role;
   },
 
   delete: async (id) => {
     const response = await api.delete(`/roles/${id}`);
-    clearRoleCache();
+    clearListCache();
+    roleByIdCache.delete(id);
     return response.data;
   },
 };
