@@ -25,6 +25,7 @@ import { useAuth } from "../../store/hooks";
 import { useChat } from "../../store/hooks";
 import { chatActions } from "../../store/slices/chatSlice";
 
+// Permission labels must match Role permissions (e.g. dummyData.initialPermissions). If set, sidebar shows item only when user has that permission granted. If user has no permissions array, role-based visibility is used.
 const menuItems = [
   {
     key: "dashboard",
@@ -37,7 +38,8 @@ const menuItems = [
     key: "userManagement",
     label: "User Management",
     Icon: UserManagementIcon,
-    roles: ["super-admin","admin"],
+    roles: ["super-admin", "admin"],
+    permissionLabel: "View User",
     navigate: "/user-management",
   },
   {
@@ -51,7 +53,8 @@ const menuItems = [
     key: "deviceManagement",
     label: "Device Management",
     Icon: DeviceManagement,
-    roles: ["super-admin","admin"],
+    roles: ["super-admin", "admin"],
+    permissionLabel: "View Devices",
     navigate: "/device-management",
   },
   {
@@ -73,6 +76,7 @@ const menuItems = [
     label: "Tickets and Complaints",
     Icon: Tickets,
     roles: ["super-admin", "admin"],
+    permissionLabel: "See Tickets and COmplaints",
     navigate: "/tickets",
   },
   {
@@ -80,28 +84,28 @@ const menuItems = [
     label: "Chat",
     Icon: Chat,
     roles: ["super-admin", "admin", "enterprise", "end-user"],
+    permissionLabel: "Answer Chats",
     navigate: "/chat",
   },
   {
-    key:"rolemanagement",
-    label:"Role Management",
-    Icon:RoleIcon,
+    key: "rolemanagement",
+    label: "Role Management",
+    Icon: RoleIcon,
     roles: ["super-admin"],
-    navigate:"/roles"
+    navigate: "/roles",
   },
   {
-    key:"discotariffrates",
-    label:"DISCO Tariff Rates",
-    Icon:TariffIcon,
+    key: "discotariffrates",
+    label: "DISCO Tariff Rates",
+    Icon: TariffIcon,
     roles: ["super-admin"],
-    navigate:"/tariff"
+    navigate: "/tariff",
   },
-
   {
     key: "settings ",
     label: "Settings ",
     Icon: Settings,
-    roles: ["super-admin","admin"],
+    roles: ["super-admin", "admin"],
     navigate: "/settings",
   },
   {
@@ -144,8 +148,20 @@ const Sidebar = ({}) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const navigate = useNavigate();
 
-  // Get user role from AuthContext (works with mock user for screenshots)
   const userRole = user?.role || "super-admin";
+  const userPermissions = user?.permissions || [];
+
+  const hasPermission = (label) => {
+    if (!label || !Array.isArray(userPermissions) || userPermissions.length === 0) return true;
+    const entry = userPermissions.find((p) => String(p?.label).trim() === String(label).trim());
+    return entry ? Boolean(entry.permission) : false;
+  };
+
+  const visibleMenuItems = menuItems.filter((item) => {
+    if (!item.roles.includes(userRole)) return false;
+    if (item.permissionLabel && userPermissions.length > 0) return hasPermission(item.permissionLabel);
+    return true;
+  });
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -212,9 +228,7 @@ const Sidebar = ({}) => {
         )}
       </div>
       <nav className="flex-1 flex flex-col space-y-2">
-        {menuItems
-          .filter((item) => item.roles.includes(userRole))
-          .map(({ key, label, Icon, navigate: path }, idx, arr) => {
+        {visibleMenuItems.map(({ key, label, Icon, navigate: path }, idx, arr) => {
             const isActive = path === location.pathname;
             const isBottomItem =
               (key === "settings " || key === "logout") &&

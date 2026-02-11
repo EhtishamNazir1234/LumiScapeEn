@@ -174,6 +174,14 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/roles/edit/:id"
+          element={
+            <ProtectedRoute allowedRoles={["super-admin"]}>
+              <NewRole />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/tariff"
           element={
             <ProtectedRoute allowedRoles={["super-admin", "admin"]}>

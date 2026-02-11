@@ -122,6 +122,7 @@ router.post('/login', [
       status: user.status,
       lastLogin: user.lastLogin,
       profileImage: user.profileImage,
+      permissions: user.permissions || [],
       token
     });
   } catch (error) {

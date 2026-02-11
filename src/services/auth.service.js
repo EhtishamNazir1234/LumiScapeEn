@@ -17,7 +17,8 @@ export const authService = {
         country: response.data.country,
         status: response.data.status,
         lastLogin: response.data.lastLogin,
-        profileImage: response.data.profileImage
+        profileImage: response.data.profileImage,
+        permissions: response.data.permissions || []
       }));
     }
     return response.data;
