@@ -140,9 +140,9 @@ router.put('/:id', [
       delete req.body.role;
     }
 
-    // When user updates own profile, only allow specific fields (including profileImage)
+    // When user updates own profile, only allow specific fields (including profileImage and notificationPreferences)
     const isSelfUpdate = req.user._id.toString() === req.params.id;
-    const allowedSelfFields = ['name', 'email', 'phone', 'profileImage'];
+    const allowedSelfFields = ['name', 'email', 'phone', 'profileImage', 'notificationPreferences'];
     const updatePayload = isSelfUpdate
       ? allowedSelfFields.reduce((acc, key) => {
           if (req.body[key] !== undefined) acc[key] = req.body[key];
