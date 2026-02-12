@@ -61,6 +61,20 @@ const userSchema = new mongoose.Schema({
     label: String,
     permission: Boolean
   }],
+  // Per-user notification preferences for the dashboard UI.
+  // All fields default to true so existing users receive notifications
+  // until they explicitly opt out via Notification Settings.
+  notificationPreferences: {
+    enableAll: { type: Boolean, default: true },
+    emailAlerts: { type: Boolean, default: true },
+    suspiciousLoginAlerts: { type: Boolean, default: true },
+    unusualEnergyConsumption: { type: Boolean, default: true },
+    groupEnergyLimitBreached: { type: Boolean, default: true },
+    userGroupMembershipChanges: { type: Boolean, default: true },
+    manualDeviceAdditionRequests: { type: Boolean, default: true },
+    systemMaintenanceNotices: { type: Boolean, default: true },
+    appVersionUpdates: { type: Boolean, default: true },
+  },
   rememberMe: {
     type: Boolean,
     default: false
