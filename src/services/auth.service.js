@@ -18,7 +18,8 @@ export const authService = {
         status: response.data.status,
         lastLogin: response.data.lastLogin,
         profileImage: response.data.profileImage,
-        permissions: response.data.permissions || []
+        permissions: response.data.permissions || [],
+        notificationPreferences: response.data.notificationPreferences || undefined,
       }));
     }
     return response.data;

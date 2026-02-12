@@ -123,6 +123,7 @@ router.post('/login', [
       lastLogin: user.lastLogin,
       profileImage: user.profileImage,
       permissions: user.permissions || [],
+      notificationPreferences: user.notificationPreferences || undefined,
       token
     });
   } catch (error) {
