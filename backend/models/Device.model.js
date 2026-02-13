@@ -43,6 +43,20 @@ const deviceSchema = new mongoose.Schema({
     totalUsage: { type: Number, default: 0 },
     cost: { type: Number, default: 0 }
   },
+  // Optional virtual power state + metadata for devices we control
+  // directly from the web app (e.g. registered mobile phone).
+  isOn: {
+    type: Boolean,
+    default: false
+  },
+  powerRatingW: {
+    type: Number,
+    default: 15 // approximate phone charging power in watts
+  },
+  lastPowerOnAt: {
+    type: Date,
+    default: null
+  },
   firmwareVersion: {
     type: String
   },
