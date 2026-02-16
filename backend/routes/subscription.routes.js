@@ -1,11 +1,13 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
+import Stripe from 'stripe';
 import Subscription from '../models/Subscription.model.js';
 import Plan from '../models/Plan.model.js';
 import User from '../models/User.model.js';
 import { protect, authorize } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
 router.use(protect);
 
@@ -114,8 +116,71 @@ router.put('/plans/:id', authorize('super-admin'), async (req, res) => {
   }
 });
 
+// @route   POST /api/subscriptions/create-checkout-session
+// @desc    Create Stripe Checkout session for payment (users subscribe after payment)
+// @access  Private (enterprise, end-user for self; admin for others)
+router.post('/create-checkout-session', [
+  body('planId').notEmpty().withMessage('Plan ID is required'),
+  body('userId').optional(),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const userId = req.body.userId || req.user._id;
+    const planId = req.body.planId;
+
+    if (userId.toString() !== req.user._id.toString() &&
+        req.user.role !== 'super-admin' && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    const plan = await Plan.findById(planId);
+    if (!plan) {
+      return res.status(404).json({ message: 'Plan not found' });
+    }
+
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return res.status(503).json({ message: 'Payment is not configured. Please contact support.' });
+    }
+
+    const baseUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const successUrl = `${baseUrl}/subscribe?success=true&session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${baseUrl}/subscribe?canceled=true`;
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `${plan.name} Plan`,
+            description: plan.description || `LumiScape ${plan.name} subscription - ${plan.billingCycle}`,
+            metadata: { planId: planId.toString(), planName: plan.name },
+          },
+          unit_amount: Math.round(plan.price * 100),
+        },
+        quantity: 1,
+      }],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      client_reference_id: userId.toString(),
+      metadata: { planId: planId.toString(), userId: userId.toString() },
+      customer_email: req.user.email,
+    });
+
+    res.json({ url: session.url, sessionId: session.id });
+  } catch (error) {
+    console.error('Create checkout session error:', error);
+    res.status(500).json({ message: error.message || 'Failed to create checkout session' });
+  }
+});
+
 // @route   POST /api/subscriptions
-// @desc    Create new subscription
+// @desc    Create new subscription (direct - for admin assignments; payment flow uses webhook)
 // @access  Private
 router.post('/', [
   body('planId').notEmpty().withMessage('Plan ID is required'),

@@ -16,6 +16,7 @@ import supplierRoutes from './routes/supplier.routes.js';
 import deviceRoutes from './routes/device.routes.js';
 import ticketRoutes from './routes/ticket.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
+import stripeWebhookRoutes from './routes/stripeWebhook.routes.js';
 import roleRoutes from './routes/role.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import reportRoutes from './routes/report.routes.js';
@@ -31,6 +32,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
+
+// Stripe webhook MUST receive raw body - mount before express.json()
+app.use('/api/subscriptions/webhook', express.raw({ type: 'application/json' }), stripeWebhookRoutes);
 
 // Middleware (increase limit for base64 profile images)
 app.use(cors());

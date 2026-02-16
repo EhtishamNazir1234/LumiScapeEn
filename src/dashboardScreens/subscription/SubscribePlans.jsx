@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { subscriptionService } from "../../services/subscription.service";
 import { useAuth } from "../../store/hooks";
 import { useDispatch } from "react-redux";
@@ -7,6 +8,7 @@ import { authService } from "../../services/auth.service";
 import listIcon from "../../assets/list.svg";
 
 const SubscribePlans = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [plans, setPlans] = useState([]);
   const [billingCycle, setBillingCycle] = useState("monthly");
   const [loading, setLoading] = useState(true);
@@ -21,6 +23,22 @@ const SubscribePlans = () => {
   useEffect(() => {
     fetchPlans();
   }, [billingCycle]);
+
+  useEffect(() => {
+    const success = searchParams.get("success");
+    const canceled = searchParams.get("canceled");
+    if (success === "true") {
+      authService.getCurrentUser().then((updatedUser) => {
+        dispatch(setUser(updatedUser));
+        localStorage.setItem("userInfo", JSON.stringify(updatedUser));
+      });
+      setMessage({ type: "success", text: "Payment successful! You are now subscribed." });
+      setSearchParams({}, { replace: true });
+    } else if (canceled === "true") {
+      setMessage({ type: "info", text: "Payment was canceled." });
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, dispatch, setSearchParams]);
 
   const fetchPlans = async () => {
     try {
@@ -40,13 +58,14 @@ const SubscribePlans = () => {
     try {
       setSubscribingId(planId);
       setMessage({ type: "", text: "" });
-      await subscriptionService.create({ planId });
-      const updatedUser = await authService.getCurrentUser();
-      dispatch(setUser(updatedUser));
-      localStorage.setItem("userInfo", JSON.stringify(updatedUser));
-      setMessage({ type: "success", text: "Successfully subscribed!" });
+      const { url } = await subscriptionService.createCheckoutSession(planId);
+      if (url) {
+        window.location.href = url;
+        return;
+      }
+      setMessage({ type: "error", text: "Could not start checkout." });
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || "Failed to subscribe.";
+      const msg = err?.response?.data?.message || err?.message || "Failed to start checkout.";
       setMessage({ type: "error", text: msg });
     } finally {
       setSubscribingId(null);
@@ -82,6 +101,8 @@ const SubscribePlans = () => {
           className={`mb-4 p-3 rounded-lg text-sm ${
             message.type === "success"
               ? "bg-[#E8F5E9] text-[#2E7D32]"
+              : message.type === "info"
+              ? "bg-[#E3F2FD] text-[#1565C0]"
               : "bg-[#FFEBEE] text-[#C62828]"
           }`}
         >
@@ -169,10 +190,10 @@ const SubscribePlans = () => {
                     }`}
                   >
                     {subscribingId === plan._id
-                      ? "Subscribing..."
+                      ? "Redirecting to payment..."
                       : isCurrent
                       ? "Current Plan"
-                      : "Subscribe"}
+                      : "Subscribe with Payment"}
                   </button>
                 </div>
               </div>

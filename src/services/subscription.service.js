@@ -53,6 +53,12 @@ export const subscriptionService = {
     return response.data;
   },
 
+  createCheckoutSession: async (planId, userId) => {
+    const payload = userId ? { planId, userId } : { planId };
+    const response = await api.post('/subscriptions/create-checkout-session', payload);
+    return response.data;
+  },
+
   getRevenue: async () => {
     if (revenueCache.data) {
       return revenueCache.data;
