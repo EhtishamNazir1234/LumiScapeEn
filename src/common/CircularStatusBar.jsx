@@ -3,14 +3,15 @@ import total from "../assets/total.svg";
 import basicColor from "../assets/basicColor.svg";
 import primiumColor from "../assets/primiumColor.svg";
 import standardColor from "../assets/standardColor.svg";
-const CircularStatusBar = ({ data }) => {
+const CircularStatusBar = ({ data = { basic: 0, standard: 0, premium: 0 }, loading = false }) => {
   const [transformData, setTransformData] = useState([]);
+  const safeData = data ?? { basic: 0, standard: 0, premium: 0 };
 
-  const totalUsers = data.basic + data.standard + data.premium;
-  // Calculate percentages for the donut chart
-  const basicPercentage = (data.basic / totalUsers) * 100;
-  const standardPercentage = (data.standard / totalUsers) * 100;
-  const premiumPercentage = (data.premium / totalUsers) * 100;
+  const totalUsers = (safeData.basic ?? 0) + (safeData.standard ?? 0) + (safeData.premium ?? 0);
+  // Calculate percentages for the donut chart (avoid division by zero)
+  const basicPercentage = totalUsers > 0 ? ((safeData.basic ?? 0) / totalUsers) * 100 : 0;
+  const standardPercentage = totalUsers > 0 ? ((safeData.standard ?? 0) / totalUsers) * 100 : 0;
+  const premiumPercentage = totalUsers > 0 ? ((safeData.premium ?? 0) / totalUsers) * 100 : 0;
 
   // SVG circle properties
   const radius = 75;
@@ -35,9 +36,10 @@ const CircularStatusBar = ({ data }) => {
       premium: primiumColor,
     };
 
-    let arr = Object.keys(data).map((key) => ({
+    const d = data ?? { basic: 0, standard: 0, premium: 0 };
+    let arr = Object.keys(d).map((key) => ({
       name: key,
-      value: data[key],
+      value: d[key],
       color: colorMapping[key],
       image: imageMapping[key],
     }));
@@ -47,7 +49,7 @@ const CircularStatusBar = ({ data }) => {
 
   return (
     <div
-      className="rounded-3xl w-full p-5 global-bg-color box-shadow"
+      className={`rounded-3xl w-full p-5 global-bg-color box-shadow ${loading ? "opacity-70 pointer-events-none" : ""}`}
     >
       <h1 className="font-vivita my-2 font-[500]">Active Subscriptions</h1>
       <div className="flex gap-3">
@@ -123,10 +125,9 @@ const CircularStatusBar = ({ data }) => {
           {/* Center Text */}
           <div className="absolute inset-0 flex items-center justify-center">
             <span
-              
               className="text-2xl font-bold box-shadow  text-white bg-gradient-to-br from-[#9FFFAE] to-[#0360A9] shadow-lg rounded-full w-25 h-25 flex items-center justify-center"
             >
-              {totalUsers}
+              {loading ? "..." : totalUsers}
             </span>
           </div>
         </div>

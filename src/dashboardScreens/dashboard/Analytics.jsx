@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CircularStatusBar from "../../common/CircularStatusBar";
 import MonthSelectField from "../../common/MonthSelectField";
 import { IoIosWarning } from "react-icons/io";
@@ -11,18 +11,43 @@ import LineChartComponent from "../../common/LineChart";
 import { alerts } from "../../../dummyData";
 import { LineChartData } from "../../../dummyData";
 import CustomcDropdown from "../../common/custom-dropdown";
-import  TIME_OPTIONS   from "../../constant";
+import TIME_OPTIONS from "../../constant";
 import { useAuth } from "../../store/hooks";
+import { analyticsService } from "../../services/analytics.service";
 
-const userData = {
-  basic: 308,
-  standard: 200,
-  premium: 400,
+const DEFAULT_SUBSCRIPTION_DATA = {
+  basic: 0,
+  standard: 0,
+  premium: 0,
 };
 
 const DashboardAnalytics = () => {
   const [selectedOption, setSelectedOption] = useState("Last Month");
+  const [subscriptionData, setSubscriptionData] = useState(DEFAULT_SUBSCRIPTION_DATA);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchSubscriptions = async () => {
+      try {
+        setSubscriptionLoading(true);
+        const data = await analyticsService.getDashboardFresh();
+        const byPlan = data?.subscriptions?.byPlan;
+        if (byPlan) {
+          setSubscriptionData({
+            basic: byPlan.basic ?? 0,
+            standard: byPlan.standard ?? 0,
+            premium: byPlan.premium ?? 0,
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching subscription analytics:", err);
+      } finally {
+        setSubscriptionLoading(false);
+      }
+    };
+    fetchSubscriptions();
+  }, []);
   const role = user?.role || "super-admin";
 
   const getIcons = (key) => {
@@ -43,7 +68,10 @@ const DashboardAnalytics = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <div>
-        <CircularStatusBar data={userData} />
+        <CircularStatusBar
+          data={subscriptionData}
+          loading={subscriptionLoading}
+        />
       </div>
       <div className="space-y-3">
         {role === "admin" && (
@@ -65,7 +93,7 @@ const DashboardAnalytics = () => {
           </>
         )}
         {role === "super-admin" && (
-          <div className="global-bg-color border rounded-3xl box-shadow p-3 sm:p-5 space-y-2">
+          <div className="global-bg-color rounded-3xl box-shadow p-3 sm:p-5 space-y-2">
             <h3 className="font-vivita font-medium my-2 text-base sm:text-lg">
               Current Revenue:
             </h3>

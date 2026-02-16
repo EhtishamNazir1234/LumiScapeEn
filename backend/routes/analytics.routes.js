@@ -34,6 +34,15 @@ router.get('/dashboard', authorize('super-admin', 'admin'), async (req, res) => 
     const activeSubscriptions = await Subscription.countDocuments({ status: 'Active' });
     const expiredSubscriptions = await Subscription.countDocuments({ status: 'Expired' });
 
+    // Active subscriptions breakdown by plan (for subscribed users graph)
+    const subscriptionsByPlan = await Subscription.aggregate([
+      { $match: { status: 'Active' } },
+      { $group: { _id: { $toLower: '$planName' }, count: { $sum: 1 } } }
+    ]);
+    const basic = subscriptionsByPlan.find((p) => p._id === 'basic')?.count ?? 0;
+    const standard = subscriptionsByPlan.find((p) => p._id === 'standard')?.count ?? 0;
+    const premium = subscriptionsByPlan.find((p) => p._id === 'premium')?.count ?? 0;
+
     // Device category breakdown
     const deviceCategories = await Device.aggregate([
       {
@@ -61,7 +70,8 @@ router.get('/dashboard', authorize('super-admin', 'admin'), async (req, res) => 
       },
       subscriptions: {
         active: activeSubscriptions,
-        expired: expiredSubscriptions
+        expired: expiredSubscriptions,
+        byPlan: { basic, standard, premium }
       },
       deviceCategories
     });

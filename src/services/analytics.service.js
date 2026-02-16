@@ -13,6 +13,13 @@ export const analyticsService = {
     return response.data;
   },
 
+  /** Fetch fresh dashboard data (bypasses cache) for real-time subscribed users graph */
+  getDashboardFresh: async () => {
+    const response = await api.get('/analytics/dashboard');
+    dashboardCache.data = response.data;
+    return response.data;
+  },
+
   getSystem: async () => {
     if (systemCache.data) {
       return systemCache.data;
