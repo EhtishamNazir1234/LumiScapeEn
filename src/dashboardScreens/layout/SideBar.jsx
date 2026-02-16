@@ -116,6 +116,13 @@ const menuItems = [
     navigate:"/enterpriseDashboard",
   },
   {
+    key: "subscribe",
+    label: "Subscribe",
+    Icon: Subscription,
+    roles: ["enterprise", "end-user"],
+    navigate: "/subscribe",
+  },
+  {
     key: "reports ",
     label: "Reports ",
     Icon:EnterpriseReports,
