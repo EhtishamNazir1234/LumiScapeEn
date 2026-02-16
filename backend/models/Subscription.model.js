@@ -40,6 +40,10 @@ const subscriptionSchema = new mongoose.Schema({
   autoRenew: {
     type: Boolean,
     default: false
+  },
+  stripeSessionId: {
+    type: String,
+    sparse: true
   }
 }, {
   timestamps: true

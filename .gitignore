@@ -42,4 +42,4 @@ CREATE_ADMIN_USER.sh
 POSTMAN_API_TESTING_GUIDE.node_modules
 API_TESTING_GUIDE.md
 postman_collection.json
-
+SUBSCRIPTION_GUIDE.md

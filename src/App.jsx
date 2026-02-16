@@ -10,6 +10,7 @@ import UserManagement from "./dashboardScreens/userManagement/index.jsx";
 import AddAdmin from "./dashboardScreens/userManagement/addAdmin.jsx";
 import Subscription from "./dashboardScreens/subscription/index.jsx";
 import UpdateSubscription from "./dashboardScreens/subscription/UpdateSubscription.jsx";
+import SubscribePlans from "./dashboardScreens/subscription/SubscribePlans.jsx";
 import TicketsAndComplaints from "./dashboardScreens/tickets&Complaients/index.jsx";
 import Setting from "./dashboardScreens/setting/index.jsx";
 import PersonalDetail from "./dashboardScreens/setting/PersonalDetail.jsx";
@@ -138,6 +139,14 @@ function AppRoutes() {
           }
         />
         <Route path="/subscriptions" element={<Subscription />} />
+        <Route
+          path="/subscribe"
+          element={
+            <ProtectedRoute allowedRoles={["enterprise", "end-user"]}>
+              <SubscribePlans />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/subscriptions-update"
           element={
