@@ -44,7 +44,7 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await userService.getAll();
+      const response = await userService.getAll({ limit: 5000 }, { skipCache: true });
       setUsers(response.users || response || []);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -200,16 +200,25 @@ const UserManagement = () => {
       });
     }
 
-    // Plan filters only for End Users
-    if (activeTab === "endUsers") {
+    // Plan filters for End Users and Enterprise - match subscription (Basic/Standard/Premium)
+    if (activeTab === "endUsers" || activeTab === "enterprise") {
       const selectedPlans = Object.entries(planFilters)
         .filter(([, value]) => value)
         .map(([key]) => key);
 
       if (selectedPlans.length > 0) {
-        result = result.filter((user) =>
-          selectedPlans.includes(user.subscription)
-        );
+        result = result.filter((user) => {
+          const sub = (user.subscription || "").trim();
+          if (!sub) return false;
+          const subLower = sub.toLowerCase();
+          return selectedPlans.some((plan) => {
+            const planLower = plan.toLowerCase();
+            if (planLower === "premium") {
+              return subLower.includes("premium") || subLower.includes("primium");
+            }
+            return subLower.includes(planLower);
+          });
+        });
       }
     }
 
@@ -363,7 +372,7 @@ const UserManagement = () => {
             <h1 className="font-Geom text-lg md:text-xl">
               {activeTab === "admins" ? "Admins" : activeTab === "enterprise" ? "Enterprise Users" : "End Users"}
             </h1>
-            <div className="flex gap-3 sm:w-[70%] w-full">
+            <div className="flex gap-3 sm:w-[70%] w-full items-center">
               <SearchField 
                 placeholder="Search" 
                 value={searchQueries[activeTab] || ""}
@@ -374,6 +383,14 @@ const UserManagement = () => {
                   }))
                 }
               />
+              <button
+                onClick={() => fetchUsers()}
+                disabled={loading}
+                className="px-3 py-2 text-sm border border-[#0060A9] text-[#0060A9] rounded-lg hover:bg-[#0060A9]/10 disabled:opacity-50"
+                title="Refresh users"
+              >
+                Refresh
+              </button>
               <Filters onClick={() => setIsFilterBarOpen(!isFilterBarOpen)} />
             </div>
           </div>
@@ -392,9 +409,10 @@ const UserManagement = () => {
                     <th>Phone</th>
                     <th>User Id</th>
                     {activeTab === "admins" && <th>Role</th>}
-                    {activeTab === "endUsers" && (
+                    {(activeTab === "endUsers" || activeTab === "enterprise") && (
                       <>
-                        <th>Status</th>
+                        {activeTab === "endUsers" && <th>Status</th>}
+                        <th>Subscription</th>
                       </>
                     )}
                     <th className="!text-center">Action</th>
@@ -435,6 +453,13 @@ const UserManagement = () => {
                           }`}
                         >
                           {getEndUserStatus(user)}
+                        </td>
+                      )}
+                      {(activeTab === "endUsers" || activeTab === "enterprise") && (
+                        <td className="py-3 px-4 text-sm font-light">
+                          {user.subscriptionStatus === "Active" && user.subscription
+                            ? `${user.subscription}`
+                            : "—"}
                         </td>
                       )}
 

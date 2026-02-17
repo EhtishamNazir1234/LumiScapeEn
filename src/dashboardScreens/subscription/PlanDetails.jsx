@@ -1,16 +1,46 @@
-import React from "react";
-import { plansDetails } from "../../../dummyData";
+import React, { useState, useEffect } from "react";
+import { subscriptionService } from "../../services/subscription.service";
 import listIcon from "../../assets/list.svg";
 
 const PlanDetails = ({ billingCycleTab }) => {
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        setLoading(true);
+        const data = await subscriptionService.getPlans(billingCycleTab);
+        setPlans(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Error fetching plans:", err);
+        setPlans([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlans();
+  }, [billingCycleTab]);
+
+  if (loading) {
+    return (
+      <div className="py-12 text-center text-gray-500">Loading plans...</div>
+    );
+  }
+
+  if (plans.length === 0) {
+    return (
+      <div className="py-12 text-center text-gray-500">
+        No plans available. Run <code className="bg-gray-100 px-1 rounded">npm run seed:plans</code> in the backend folder to add plans.
+      </div>
+    );
+  }
+
   return (
     <div className="lg:grid lg:grid-cols-3 lg:gap-8 py-5">
-      {plansDetails.length > 0 &&
-        plansDetails
-          ?.filter((item) => item.billingCycle === billingCycleTab)
-          .map((plan, index) => (
+      {plans.map((plan, index) => (
             <div
-              key={index}
+              key={plan._id || index}
               className="bg-[#EEF3F9] rounded-lg shadow overflow-hidden md:rounded-2xl my-2"
               style={{ boxShadow: "inset 0px 2px 5px rgba(0, 0, 0, 0.15)" }}
             >
@@ -26,22 +56,23 @@ const PlanDetails = ({ billingCycleTab }) => {
                   <h2 className="md:text-[26px] text-[22px] font-medium font-vivita text-[#0060A9]">
                     ${plan.price}/{plan.billingCycle}
                   </h2>
-                  <ul
-                    role="list"
-                    className="grid lg:grid-cols-1 sm:grid-cols-2 gap-4 py-4"
-                  >
-                    {plan.features.map(
-                      (feature, idx) =>
-                        feature?.allow && (
+                  {plan.features?.length > 0 && (
+                    <ul
+                      role="list"
+                      className="grid lg:grid-cols-1 sm:grid-cols-2 gap-4 py-4"
+                    >
+                      {plan.features
+                        .filter((f) => f?.allow)
+                        .map((feature, idx) => (
                           <li key={idx} className="flex items-center gap-3">
                             <img src={listIcon} alt={feature.label} />
                             <span className="md:text-base text-[15px] font-light">
                               {feature.label}
                             </span>
                           </li>
-                        )
-                    )}
-                  </ul>
+                        ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             </div>
