@@ -10,9 +10,10 @@ const clearUserListCache = () => {
 };
 
 export const userService = {
-  getAll: async (params = {}) => {
+  getAll: async (params = {}, options = {}) => {
+    if (options.skipCache) clearUserListCache();
     const key = getCacheKey(params);
-    if (userListCache.has(key)) {
+    if (!options.skipCache && userListCache.has(key)) {
       return userListCache.get(key);
     }
     const response = await api.get('/users', { params });

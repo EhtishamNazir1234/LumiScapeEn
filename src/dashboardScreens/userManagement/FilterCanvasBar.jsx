@@ -59,7 +59,7 @@ const FilterCanvasBar = ({
           </div>
         </div>
 
-        {activeTab === "endUsers" && (
+        {(activeTab === "endUsers" || activeTab === "enterprise") && (
           <div className="!space-y-7">
             <label className="block font-medium font-vivita text-sm text-[#0060A9] mb-2">
               Filter by Plan
