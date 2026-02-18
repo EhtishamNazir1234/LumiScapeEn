@@ -1,6 +1,5 @@
 import SubscriptionDeatils from "./SubscriptionDeatils";
 import React, { useState } from "react";
-import { subscriptionData } from "../../../dummyData";
 import SearchField from "../../common/SearchField";
 import Filters from "../../common/Filters";
 import PlanDetails from "./PlanDetails";

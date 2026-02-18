@@ -205,7 +205,7 @@ export const plansDetails = [
   {
     id: 1,
     name: "Basic Plan",
-    price: "200",
+    price: "20",
     billingCycle: "monthly",
     description: "Ideal for small setups or users new to energy tracking",
     features: [
@@ -245,7 +245,7 @@ export const plansDetails = [
   {
     id: 2,
     name: "Standard Plan",
-    price: "500",
+    price: "40",
     billingCycle: "monthly",
     description: "Perfect for growing smart spaces and deeper energy insights",
     features: [
@@ -285,7 +285,7 @@ export const plansDetails = [
   {
     id: 3,
     name: "Primium Plan",
-    price: "1000",
+    price: "55",
     billingCycle: "monthly",
     description: "Best for full control, automation, and energy optimization",
     features: [
@@ -325,7 +325,7 @@ export const plansDetails = [
   {
     id: 3,
     name: "Basic Plan",
-    price: "1200",
+    price: "240",
     billingCycle: "annual",
     description: "Ideal for small setups or users new to energy tracking",
     features: [
@@ -365,7 +365,7 @@ export const plansDetails = [
   {
     id: 5,
     name: "Standard Plan",
-    price: "1500",
+    price: "480",
     billingCycle: "annual",
     description: "Perfect for growing smart spaces and deeper energy insights",
     features: [
@@ -405,7 +405,7 @@ export const plansDetails = [
   {
     id: 6,
     name: "Primium Plan",
-    price: "3000",
+    price: "660",
     billingCycle: "annual",
     description: "Best for full control, automation, and energy optimization",
     features: [
