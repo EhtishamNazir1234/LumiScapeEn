@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import CircularStatusBar from "../../common/CircularStatusBar";
-import MonthSelectField from "../../common/MonthSelectField";
 import { IoIosWarning } from "react-icons/io";
 import { FaCircle } from "react-icons/fa6";
 import { SlEnergy } from "react-icons/sl";
@@ -14,6 +13,7 @@ import CustomcDropdown from "../../common/custom-dropdown";
 import TIME_OPTIONS from "../../constant";
 import { useAuth } from "../../store/hooks";
 import { analyticsService } from "../../services/analytics.service";
+import { subscriptionService } from "../../services/subscription.service";
 
 const DEFAULT_SUBSCRIPTION_DATA = {
   basic: 0,
@@ -22,14 +22,17 @@ const DEFAULT_SUBSCRIPTION_DATA = {
 };
 
 const DashboardAnalytics = () => {
-  const [selectedOption, setSelectedOption] = useState("Last Month");
   const [subscriptionData, setSubscriptionData] = useState(DEFAULT_SUBSCRIPTION_DATA);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  const [revenue, setRevenue] = useState(null);
+  const [revenueLoading, setRevenueLoading] = useState(true);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
   const { user } = useAuth();
 
-  const fetchSubscriptions = async () => {
+  const fetchSubscriptions = async (options = {}) => {
+    const { silent = false } = options || {};
     try {
-      setSubscriptionLoading(true);
+      if (!silent) setSubscriptionLoading(true);
       const data = await analyticsService.getDashboardFresh();
       const byPlan = data?.subscriptions?.byPlan;
       if (byPlan) {
@@ -42,14 +45,58 @@ const DashboardAnalytics = () => {
     } catch (err) {
       console.error("Error fetching subscription analytics:", err);
     } finally {
-      setSubscriptionLoading(false);
+      if (!silent) setSubscriptionLoading(false);
+    }
+  };
+
+  const fetchRevenue = async (options = {}) => {
+    const { silent = false } = options || {};
+    try {
+      if (!silent) setRevenueLoading(true);
+      const data = await subscriptionService.getRevenue({ fresh: true });
+      setRevenue(data || null);
+      setLastUpdatedAt(new Date());
+    } catch (err) {
+      console.error("Error fetching revenue analytics:", err);
+    } finally {
+      if (!silent) setRevenueLoading(false);
     }
   };
 
   useEffect(() => {
     fetchSubscriptions();
+    fetchRevenue();
+
+    const intervalId = setInterval(() => {
+      fetchSubscriptions({ silent: true });
+      fetchRevenue({ silent: true });
+    }, 30_000);
+
+    const onFocus = () => {
+      fetchSubscriptions({ silent: true });
+      fetchRevenue({ silent: true });
+    };
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
   const role = user?.role || "super-admin";
+
+  const formatUsd = (value) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(Number.isFinite(value) ? value : 0);
+
+  const monthLabel = new Date().toLocaleString("en-US", { month: "long" });
+  const monthlyRevenue = revenue?.monthlyRevenue;
+  const annualRevenue = revenue?.annualRevenue;
+  const totalRevenue = revenue?.totalRevenue;
+  const currentRevenue = Number.isFinite(monthlyRevenue) ? monthlyRevenue : totalRevenue;
 
   const getIcons = (key) => {
     switch (key) {
@@ -70,10 +117,13 @@ const DashboardAnalytics = () => {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <div className="relative">
         <button
-          onClick={fetchSubscriptions}
-          disabled={subscriptionLoading}
+          onClick={() => {
+            fetchSubscriptions();
+            fetchRevenue();
+          }}
+          disabled={subscriptionLoading || revenueLoading}
           className="absolute top-2 right-2 z-10 p-1.5 rounded-lg text-[#0060A9] hover:bg-[#0060A9]/10 disabled:opacity-50"
-          title="Refresh subscription data"
+          title="Refresh subscription and revenue data"
           aria-label="Refresh"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -121,11 +171,11 @@ const DashboardAnalytics = () => {
               />
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                 <span className="text-[#0060A9] text-[13px] sm:text-[15px] text-light whitespace-nowrap">
-                  Revenue generated in april
+                  Revenue generated in {monthLabel}
                 </span>
                 <div className="hidden sm:block w-8 h-[3px] rounded-4xl bg-[#0060A9]"></div>
                 <span className="text-[#0060A9] font-semibold whitespace-nowrap">
-                  $6,200
+                  {revenueLoading ? "Loading..." : formatUsd(currentRevenue)}
                 </span>
               </div>
             </div>
@@ -134,7 +184,7 @@ const DashboardAnalytics = () => {
               <div className="text-[12px] sm:text-[14px] whitespace-nowrap">
                 <span className="text-light">Performance alert: </span>
                 <span className="text-[#0060A9]">
-                  50% growth in monthly revenue
+                  Live revenue updates based on active subscriptions
                 </span>
               </div>
             </div>
@@ -150,10 +200,18 @@ const DashboardAnalytics = () => {
                 className="w-4 h-4 flex-shrink-0"
               />
               <span className="text-gray-700 whitespace-nowrap overflow-hidden">
-                <span className="text-[#0060A9] font-semibold">$6,200 </span>
-                generated this month vs
-                <span className="text-[#0060A9] font-semibold"> $4,100 </span>
-                last month
+                <span className="text-[#0060A9] font-semibold">
+                  {revenueLoading ? "Loading..." : formatUsd(monthlyRevenue)}
+                </span>{" "}
+                monthly ·{" "}
+                <span className="text-[#0060A9] font-semibold">
+                  {revenueLoading ? "Loading..." : formatUsd(annualRevenue)}
+                </span>{" "}
+                annual ·{" "}
+                <span className="text-[#0060A9] font-semibold">
+                  {revenueLoading ? "Loading..." : formatUsd(totalRevenue)}
+                </span>{" "}
+                total
               </span>
             </div>
 
@@ -164,10 +222,9 @@ const DashboardAnalytics = () => {
                 className="w-4 h-4 flex-shrink-0"
               />
               <span className="text-gray-700 whitespace-nowrap overflow-hidden scrollbar-hide">
-                Revenue increased:
+                Last updated:{" "}
                 <span className="text-[#0060A9] font-semibold">
-                 
-                  65% compared to April 2024
+                  {lastUpdatedAt ? lastUpdatedAt.toLocaleTimeString() : "—"}
                 </span>
               </span>
             </div>
@@ -179,11 +236,8 @@ const DashboardAnalytics = () => {
                 className="w-4 h-4 flex-shrink-0"
               />
               <span className="text-gray-700 whitespace-nowrap overflow-x-auto">
-                Expected to reach:
-                <span className="text-[#0060A9] font-semibold">
-                  {" "}
-                  $7.5K by end of April
-                </span>
+                Auto-refresh:{" "}
+                <span className="text-[#0060A9] font-semibold">every 30 seconds</span>
               </span>
             </div>
           </div>

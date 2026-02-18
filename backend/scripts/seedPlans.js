@@ -12,7 +12,7 @@ dotenv.config();
 const plans = [
   {
     name: 'Basic',
-    price: 200,
+    price: 20,
     billingCycle: 'monthly',
     description: 'Ideal for small setups or users new to energy tracking',
     isActive: true,
@@ -26,7 +26,7 @@ const plans = [
   },
   {
     name: 'Basic',
-    price: 1200,
+    price: 240,
     billingCycle: 'annual',
     description: 'Ideal for small setups or users new to energy tracking',
     isActive: true,
@@ -40,7 +40,7 @@ const plans = [
   },
   {
     name: 'Standard',
-    price: 500,
+    price: 40,
     billingCycle: 'monthly',
     description: 'Perfect for growing smart spaces and deeper energy insights',
     isActive: true,
@@ -56,7 +56,7 @@ const plans = [
   },
   {
     name: 'Standard',
-    price: 3000,
+    price: 480,
     billingCycle: 'annual',
     description: 'Perfect for growing smart spaces and deeper energy insights',
     isActive: true,
@@ -72,7 +72,7 @@ const plans = [
   },
   {
     name: 'Premium',
-    price: 1000,
+    price: 55,
     billingCycle: 'monthly',
     description: 'Best for full control, automation, and energy optimization',
     isActive: true,
@@ -89,7 +89,7 @@ const plans = [
   },
   {
     name: 'Premium',
-    price: 6000,
+    price: 660,
     billingCycle: 'annual',
     description: 'Best for full control, automation, and energy optimization',
     isActive: true,
@@ -112,15 +112,17 @@ async function seedPlans() {
     await mongoose.connect(uri);
     console.log('MongoDB connected');
 
-    const count = await Plan.countDocuments();
-    if (count > 0) {
-      console.log(`Plans already exist (${count} plans). Skipping seed.`);
-      process.exit(0);
-      return;
-    }
+    const results = await Promise.all(
+      plans.map((plan) =>
+        Plan.findOneAndUpdate(
+          { name: plan.name, billingCycle: plan.billingCycle },
+          { $set: plan },
+          { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
+        )
+      )
+    );
 
-    await Plan.insertMany(plans);
-    console.log(`Successfully seeded ${plans.length} plans.`);
+    console.log(`Seed complete. Upserted ${results.length} plans.`);
     process.exit(0);
   } catch (err) {
     console.error('Seed error:', err);

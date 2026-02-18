@@ -59,8 +59,9 @@ export const subscriptionService = {
     return response.data;
   },
 
-  getRevenue: async () => {
-    if (revenueCache.data) {
+  getRevenue: async (options = {}) => {
+    const { fresh = false } = options || {};
+    if (!fresh && revenueCache.data) {
       return revenueCache.data;
     }
     const response = await api.get('/subscriptions/revenue');
