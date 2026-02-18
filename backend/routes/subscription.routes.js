@@ -179,6 +179,78 @@ router.post('/create-checkout-session', [
   }
 });
 
+// @route   POST /api/subscriptions/confirm-from-client
+// @desc    Fallback: create or sync subscription after successful checkout (when webhook is not available).
+// @access  Private
+router.post('/confirm-from-client', async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { planId } = req.body || {};
+
+    if (!planId) {
+      return res.status(400).json({ message: 'Plan ID is required' });
+    }
+
+    const plan = await Plan.findById(planId);
+    if (!plan) {
+      return res.status(404).json({ message: 'Plan not found' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Try to find existing active subscription for this user & plan
+    let subscription = await Subscription.findOne({
+      userId,
+      planId: plan._id,
+      status: 'Active'
+    });
+
+    // Calculate expiry date
+    const expiryDate = new Date();
+    if (plan.billingCycle === 'monthly') {
+      expiryDate.setMonth(expiryDate.getMonth() + 1);
+    } else {
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+    }
+
+    if (!subscription) {
+      subscription = await Subscription.create({
+        userId,
+        planId: plan._id,
+        planName: plan.name,
+        price: plan.price,
+        billingCycle: plan.billingCycle,
+        expiryDate
+      });
+    } else {
+      // Keep it active and make sure expiry is at least the new date
+      subscription.status = 'Active';
+      if (!subscription.expiryDate || subscription.expiryDate < expiryDate) {
+        subscription.expiryDate = expiryDate;
+      }
+      await subscription.save();
+    }
+
+    // Update user subscription info
+    user.subscription = plan.name;
+    user.subscriptionStatus = 'Active';
+    user.subscriptionExpiryDate = subscription.expiryDate;
+    await user.save();
+
+    const populatedSubscription = await Subscription.findById(subscription._id)
+      .populate('userId', 'name email userId')
+      .populate('planId');
+
+    res.json(populatedSubscription);
+  } catch (error) {
+    console.error('Confirm subscription from client error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   POST /api/subscriptions
 // @desc    Create new subscription (direct - for admin assignments; payment flow uses webhook)
 // @access  Private

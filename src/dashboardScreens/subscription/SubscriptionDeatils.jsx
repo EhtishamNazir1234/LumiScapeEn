@@ -16,8 +16,9 @@ const SubscriptionDeatils = () => {
   const fetchSubscriptions = async () => {
     try {
       setLoading(true);
-      const response = await subscriptionService.getAll();
-      setSubscriptions(response.subscriptions || response || []);
+      const response = await subscriptionService.getAll({ limit: 5000 });
+      const list = response?.subscriptions ?? response ?? [];
+      setSubscriptions(Array.isArray(list) ? list : []);
     } catch (error) {
       console.error("Error fetching subscriptions:", error);
       setSubscriptions([]);
@@ -32,32 +33,50 @@ const SubscriptionDeatils = () => {
       "User Name": subscription.userId?.name || subscription.userName || "N/A",
       "Email": subscription.userId?.email || subscription.email || "N/A",
       "Plan Name": subscription.planName || subscription.planId?.name || "N/A",
-      "Price": `$${subscription.price || subscription.planId?.price || "0"}`,
+      "Price": `$${subscription.price ?? subscription.planId?.price ?? "0"}`,
       "Billing Cycle": subscription.billingCycle || "N/A",
       "Status": subscription.status || "Active",
-      "Expiry Date": subscription.expiryDate 
-        ? new Date(subscription.expiryDate).toLocaleDateString() 
+      "Expiry Date": subscription.expiryDate
+        ? new Date(subscription.expiryDate).toLocaleDateString()
         : "N/A",
     };
     setSelectedSubscription(viewData);
     setIsViewModalOpen(true);
   };
 
+  const formatPrice = (val) => {
+    if (val == null || val === "") return "N/A";
+    const num = Number(val);
+    return Number.isFinite(num) ? `$${num}` : "N/A";
+  };
+
+  const formatDate = (val) => {
+    if (!val) return "N/A";
+    try {
+      return new Date(val).toLocaleDateString();
+    } catch {
+      return "N/A";
+    }
+  };
+
   return (
     <>
       <div className="overflow-x-auto my-7">
         {loading ? (
-          <div className="text-center py-8">Loading...</div>
+          <div className="text-center py-8 text-gray-500">Loading subscriptions...</div>
         ) : subscriptions.length === 0 ? (
-          <div className="text-center py-8">No subscriptions found</div>
+          <div className="text-center py-8 text-gray-500">No subscriptions found</div>
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="table-header">
+              <tr className="table-header whitespace-nowrap">
                 <th>Name</th>
                 <th>Email Address</th>
-                <th>Subscriptions</th>
+                <th>Plan Name</th>
+                <th>Price</th>
+                <th>Billing Cycle</th>
                 <th>Status</th>
+                <th>Expiry Date</th>
                 <th className="!text-center">Action</th>
               </tr>
             </thead>
@@ -67,23 +86,33 @@ const SubscriptionDeatils = () => {
                   key={subscription._id || index}
                   className="border-b-[1px] border-[#DEDFE0] last:border-0"
                 >
-                  <td className="py-3 px-4 text-sm font-light ">
+                  <td className="py-3 px-4 text-sm font-light">
                     {subscription.userId?.name || subscription.userName || "N/A"}
                   </td>
-                  <td className="py-3 font-light text-sm">
+                  <td className="py-3 px-4 font-light text-sm">
                     {subscription.userId?.email || subscription.email || "N/A"}
                   </td>
                   <td className="py-3 px-4 text-sm font-light">
                     {subscription.planName || subscription.planId?.name || "N/A"}
                   </td>
                   <td className="py-3 px-4 text-sm font-light">
+                    {formatPrice(subscription.price ?? subscription.planId?.price)}
+                  </td>
+                  <td className="py-3 px-4 text-sm font-light">
+                    {subscription.billingCycle || "N/A"}
+                  </td>
+                  <td className="py-3 px-4 text-sm font-light">
                     {subscription.status || "Active"}
+                  </td>
+                  <td className="py-3 px-4 text-sm font-light">
+                    {formatDate(subscription.expiryDate)}
                   </td>
                   <td className="py-3 px-4 font-light flex justify-center gap-3">
                     <IoEyeOutline
                       onClick={() => handleView(subscription)}
                       size={22}
                       className="text-[#0061A9] cursor-pointer"
+                      aria-label="View details"
                     />
                   </td>
                 </tr>

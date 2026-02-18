@@ -59,6 +59,12 @@ export const subscriptionService = {
     return response.data;
   },
 
+  confirmFromClient: async (planId) => {
+    const response = await api.post('/subscriptions/confirm-from-client', { planId });
+    clearSubscriptionCaches();
+    return response.data;
+  },
+
   getRevenue: async (options = {}) => {
     const { fresh = false } = options || {};
     if (!fresh && revenueCache.data) {
