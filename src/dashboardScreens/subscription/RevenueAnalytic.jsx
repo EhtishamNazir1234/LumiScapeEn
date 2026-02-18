@@ -27,10 +27,10 @@ const RevenueAnalytic = () => {
     }).format(Number.isFinite(value) ? value : 0);
 
   const fetchSubscriptions = async (options = {}) => {
-    const { silent = false } = options || {};
+    const { silent = false, fresh = false } = options || {};
     try {
       if (!silent) setSubscriptionLoading(true);
-      const data = await analyticsService.getDashboardFresh();
+      const data = fresh ? await analyticsService.getDashboardFresh() : await analyticsService.getDashboard();
       const byPlan = data?.subscriptions?.byPlan;
       if (byPlan) {
         setSubscriptionData({
@@ -47,10 +47,10 @@ const RevenueAnalytic = () => {
   };
 
   const fetchRevenue = async (options = {}) => {
-    const { silent = false } = options || {};
+    const { silent = false, fresh = false } = options || {};
     try {
       if (!silent) setRevenueLoading(true);
-      const data = await subscriptionService.getRevenue({ fresh: true });
+      const data = await subscriptionService.getRevenue({ fresh });
       setRevenue(data || null);
     } catch (err) {
       console.error("Error fetching revenue analytics:", err);
@@ -60,12 +60,13 @@ const RevenueAnalytic = () => {
   };
 
   useEffect(() => {
+    // Use cache on mount so switching sidebar menus doesn't refetch
     fetchSubscriptions();
     fetchRevenue();
 
     const intervalId = setInterval(() => {
-      fetchSubscriptions({ silent: true });
-      fetchRevenue({ silent: true });
+      fetchSubscriptions({ silent: true, fresh: true });
+      fetchRevenue({ silent: true, fresh: true });
     }, 30_000);
 
     return () => clearInterval(intervalId);
