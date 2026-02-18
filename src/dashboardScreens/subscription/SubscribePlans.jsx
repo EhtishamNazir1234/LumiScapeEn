@@ -28,6 +28,18 @@ const SubscribePlans = () => {
     const success = searchParams.get("success");
     const canceled = searchParams.get("canceled");
     if (success === "true") {
+      const pendingPlanId = localStorage.getItem("pendingPlanId");
+      if (pendingPlanId) {
+        subscriptionService
+          .confirmFromClient(pendingPlanId)
+          .catch((err) =>
+            console.error("Error confirming subscription from client:", err)
+          )
+          .finally(() => {
+            localStorage.removeItem("pendingPlanId");
+          });
+      }
+
       authService.getCurrentUser().then((updatedUser) => {
         dispatch(setUser(updatedUser));
         localStorage.setItem("userInfo", JSON.stringify(updatedUser));
@@ -58,6 +70,8 @@ const SubscribePlans = () => {
     try {
       setSubscribingId(planId);
       setMessage({ type: "", text: "" });
+      // Remember selected plan so we can confirm subscription after redirect
+      localStorage.setItem("pendingPlanId", planId);
       const { url } = await subscriptionService.createCheckoutSession(planId);
       if (url) {
         window.location.href = url;
