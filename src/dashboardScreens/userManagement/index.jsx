@@ -40,11 +40,12 @@ const UserManagement = () => {
   });
   const [showArchived, setShowArchived] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
-  // Fetch all users once and use client-side filtering for tabs/search/filters
-  const fetchUsers = async () => {
+  // Fetch all users once and use client-side filtering for tabs/search/filters.
+  // Use cache on mount so switching sidebar menus doesn't refetch; pass true for explicit refresh.
+  const fetchUsers = async (skipCache = false) => {
     try {
       setLoading(true);
-      const response = await userService.getAll({ limit: 5000 }, { skipCache: true });
+      const response = await userService.getAll({ limit: 5000 }, { skipCache });
       setUsers(response.users || response || []);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -384,7 +385,7 @@ const UserManagement = () => {
                 }
               />
               <button
-                onClick={() => fetchUsers()}
+                onClick={() => fetchUsers(true)}
                 disabled={loading}
                 className="px-3 py-2 text-sm border border-[#0060A9] text-[#0060A9] rounded-lg hover:bg-[#0060A9]/10 disabled:opacity-50"
                 title="Refresh users"

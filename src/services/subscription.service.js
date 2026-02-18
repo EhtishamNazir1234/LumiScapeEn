@@ -1,14 +1,21 @@
 import api from './api';
 
+const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes - avoid refetch when switching sidebar
 const subscriptionListCache = new Map();
 const planListCache = new Map();
-const revenueCache = { data: null };
+const revenueCache = { data: null, timestamp: null };
 
 const getKey = (params = {}) => JSON.stringify(params || {});
+const isRevenueCacheValid = () =>
+  revenueCache.data != null &&
+  revenueCache.timestamp != null &&
+  Date.now() - revenueCache.timestamp < CACHE_TTL_MS;
+
 const clearSubscriptionCaches = () => {
   subscriptionListCache.clear();
   planListCache.clear();
   revenueCache.data = null;
+  revenueCache.timestamp = null;
 };
 
 export const subscriptionService = {
@@ -67,11 +74,12 @@ export const subscriptionService = {
 
   getRevenue: async (options = {}) => {
     const { fresh = false } = options || {};
-    if (!fresh && revenueCache.data) {
+    if (!fresh && isRevenueCacheValid()) {
       return revenueCache.data;
     }
     const response = await api.get('/subscriptions/revenue');
     revenueCache.data = response.data;
+    revenueCache.timestamp = Date.now();
     return response.data;
   }
 };

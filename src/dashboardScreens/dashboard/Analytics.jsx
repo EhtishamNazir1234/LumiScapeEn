@@ -30,10 +30,10 @@ const DashboardAnalytics = () => {
   const { user } = useAuth();
 
   const fetchSubscriptions = async (options = {}) => {
-    const { silent = false } = options || {};
+    const { silent = false, fresh = false } = options || {};
     try {
       if (!silent) setSubscriptionLoading(true);
-      const data = await analyticsService.getDashboardFresh();
+      const data = fresh ? await analyticsService.getDashboardFresh() : await analyticsService.getDashboard();
       const byPlan = data?.subscriptions?.byPlan;
       if (byPlan) {
         setSubscriptionData({
@@ -50,10 +50,10 @@ const DashboardAnalytics = () => {
   };
 
   const fetchRevenue = async (options = {}) => {
-    const { silent = false } = options || {};
+    const { silent = false, fresh = false } = options || {};
     try {
       if (!silent) setRevenueLoading(true);
-      const data = await subscriptionService.getRevenue({ fresh: true });
+      const data = await subscriptionService.getRevenue({ fresh });
       setRevenue(data || null);
       setLastUpdatedAt(new Date());
     } catch (err) {
@@ -64,17 +64,18 @@ const DashboardAnalytics = () => {
   };
 
   useEffect(() => {
+    // Use cache on mount so switching sidebar menus doesn't refetch
     fetchSubscriptions();
     fetchRevenue();
 
     const intervalId = setInterval(() => {
-      fetchSubscriptions({ silent: true });
-      fetchRevenue({ silent: true });
+      fetchSubscriptions({ silent: true, fresh: true });
+      fetchRevenue({ silent: true, fresh: true });
     }, 30_000);
 
     const onFocus = () => {
-      fetchSubscriptions({ silent: true });
-      fetchRevenue({ silent: true });
+      fetchSubscriptions({ silent: true, fresh: true });
+      fetchRevenue({ silent: true, fresh: true });
     };
     window.addEventListener("focus", onFocus);
 
@@ -118,8 +119,8 @@ const DashboardAnalytics = () => {
       <div className="relative">
         <button
           onClick={() => {
-            fetchSubscriptions();
-            fetchRevenue();
+            fetchSubscriptions({ fresh: true });
+            fetchRevenue({ fresh: true });
           }}
           disabled={subscriptionLoading || revenueLoading}
           className="absolute top-2 right-2 z-10 p-1.5 rounded-lg text-[#0060A9] hover:bg-[#0060A9]/10 disabled:opacity-50"
