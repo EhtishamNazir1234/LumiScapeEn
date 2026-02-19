@@ -1,9 +1,11 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { IoEyeOutline } from "react-icons/io5";
 import { MdOutlineAssignment } from "react-icons/md";
 import { ticketsData1 } from "../../../dummyData";
 
 const TicketsAndComplain = () => {
+  const navigate = useNavigate();
   return (
     <div className="overflow-x-auto my-7">
       <table className="w-full whitespace-nowrap">
@@ -37,9 +39,9 @@ const TicketsAndComplain = () => {
                   <MdOutlineAssignment size={22} className="text-[#0061A9]" />
                 ) : (
                   <IoEyeOutline
-                    onClick={() => setIsViewModalOpen(true)}
+                    onClick={() => navigate("/tickets")}
                     size={22}
-                    className="text-[#0061A9]"
+                    className="text-[#0061A9] cursor-pointer"
                   />
                 )}
               </td>

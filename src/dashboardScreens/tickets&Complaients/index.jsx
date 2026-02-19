@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { IoEyeOutline } from "react-icons/io5";
 import TicketViewModal from "./TicketViewModal";
+import CreateTicketModal from "./CreateTicketModal";
 import SearchField from "../../common/SearchField";
 import Filters from "../../common/Filters";
 import UserListModal from "../../common/UserListModal";
 import TicketOverView from "./TicketOverView";
 import { ticketService } from "../../services/ticket.service";
 import { userService } from "../../services/user.service";
+import { useAuth } from "../../store/hooks";
 
 const TicketsAndComplaints = () => {
+  const { user } = useAuth();
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isFilterBarOpen, setIsFilterBarOpen] = useState(false);
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -102,17 +106,68 @@ const TicketsAndComplaints = () => {
     }
   };
 
+  const handleResolve = async () => {
+    if (!selectedTicket?._id) return;
+    try {
+      await ticketService.update(selectedTicket._id, { status: "Resolved" });
+      setIsViewModalOpen(false);
+      setSelectedTicket(null);
+      fetchTickets();
+    } catch (error) {
+      console.error("Error resolving ticket:", error);
+      alert("Failed to mark ticket as resolved. Please try again.");
+    }
+  };
+
+  const handleCreateTicket = async (data) => {
+    await ticketService.create({
+      ...data,
+      userName: user?.name || "User",
+    });
+    fetchTickets();
+  };
+
+  const buildViewData = (ticket) => {
+    if (!ticket) return null;
+    return {
+      "Ticket ID": ticket.ticketNumber || `#${(ticket._id || "").slice(-6)}`,
+      "User Name": ticket.userName ?? "—",
+      "User Email": ticket.userEmail ?? "—",
+      "Type": ticket.type ?? "—",
+      "Status": ticket.status ?? "New",
+      "Assigned To": ticket.assignedToName || ticket.assignedTo?.name || "Not assigned",
+      "Reported On": ticket.reportedOn
+        ? new Date(ticket.reportedOn).toLocaleDateString()
+        : ticket.createdAt
+        ? new Date(ticket.createdAt).toLocaleDateString()
+        : "N/A",
+      "Severity": ticket.severity ?? "—",
+      "Issue Title": ticket.issueTitle ?? "—",
+      ticketNotes: ticket.ticketNotes ?? "",
+      _id: ticket._id,
+    };
+  };
+
   return (
     <div className="sapce-y-4">
-        <TicketOverView />
+        <TicketOverView
+          rightAction={
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="custom-shadow-button font-vivita whitespace-nowrap !py-3 !px-6 md:!w-full !w-[50%]"
+            >
+              Create Ticket
+            </button>
+          }
+        />
       <div className="flex mt-4">
         <div className="w-full">
           <div className="global-bg-color h-auto rounded-[20px] md:p-7 p-3 box-shadow ">
-            <div className="flex flex-col md:flex-row justify-between items-start w-full gap-4 mt-4">
-              <h1 className="font-Geom text-lg md:text-xl">Tickets</h1>
-
-              <div className="flex w-full md:w-[70%] gap-3">
-                <SearchField 
+            <div className="flex flex-col md:flex-row justify-between items-center w-full gap-4">
+              <h1 className="font-Geom text-lg md:text-xl w-full md:w-auto">Tickets</h1>
+              <div className="flex w-full md:w-[70%] gap-3 items-center min-h-[2.75rem]">
+                <SearchField
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -201,11 +256,12 @@ const TicketsAndComplaints = () => {
           <TicketViewModal
             isOpen={isViewModalOpen}
             onClose={() => setIsViewModalOpen(false)}
-            viewData={selectedTicket}
+            viewData={buildViewData(selectedTicket)}
             onAssignClick={() => {
               setIsViewModalOpen(false);
               setIsAssignModalOpen(true);
             }}
+            onResolve={handleResolve}
           />
           <UserListModal
             isOpen={isAssignModalOpen}
@@ -218,6 +274,12 @@ const TicketsAndComplaints = () => {
             }}
             onAssign={handleAssign}
             listData={userList}
+          />
+          <CreateTicketModal
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            onSubmit={handleCreateTicket}
+            assignableUsers={userList}
           />
         </div>
       </div>

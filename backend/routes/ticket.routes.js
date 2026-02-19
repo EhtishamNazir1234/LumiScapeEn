@@ -129,9 +129,9 @@ router.post('/', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { type, ticketNotes, issueTitle, severity } = req.body;
+    const { type, ticketNotes, issueTitle, severity, assignedTo: assignedToId } = req.body;
 
-    const ticket = await Ticket.create({
+    const createPayload = {
       userName: req.user.name,
       userEmail: req.user.email,
       type,
@@ -139,7 +139,18 @@ router.post('/', [
       issueTitle: issueTitle || '',
       severity: severity || 'Medium',
       assignedToName: 'Not assigned'
-    });
+    };
+
+    // Only super-admin, admin, customer-care can set assignedTo on create
+    if (assignedToId && ['super-admin', 'admin', 'customer-care'].includes(req.user.role)) {
+      const assignedUser = await User.findById(assignedToId);
+      if (assignedUser) {
+        createPayload.assignedTo = assignedToId;
+        createPayload.assignedToName = assignedUser.name;
+      }
+    }
+
+    const ticket = await Ticket.create(createPayload);
 
     const populatedTicket = await Ticket.findById(ticket._id)
       .populate('assignedTo', 'name email userId');
