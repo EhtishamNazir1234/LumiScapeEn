@@ -74,14 +74,20 @@ const NavBar = () => {
             </div>
           )}
         </div>
-        <img
-          src={user?.profileImage || profileImage}
-          alt="Profile"
-          width={50}
-          height={50}
-          className="w-[50px] h-[50px] object-cover rounded-full"
+        <Link
+          to="/personal-detail"
           ref={profileRef}
-        />
+          className="inline-block rounded-full focus:outline-none focus:ring-2 focus:ring-[#0060A9] focus:ring-offset-2"
+          aria-label="Go to profile"
+        >
+          <img
+            src={user?.profileImage || profileImage}
+            alt="Profile"
+            width={50}
+            height={50}
+            className="w-[50px] h-[50px] object-cover rounded-full"
+          />
+        </Link>
       </div>
     </div>
   );
