@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { RxCross2 } from "react-icons/rx";
 
-const TicketViewModal = ({ isOpen, onClose, viewData, onAssignClick }) => {
+const TicketViewModal = ({ isOpen, onClose, viewData, onAssignClick, onResolve }) => {
   const [notes, setNotes] = useState("");
   useEffect(() => {
     setNotes(viewData?.ticketNotes || "");
@@ -28,33 +28,31 @@ const TicketViewModal = ({ isOpen, onClose, viewData, onAssignClick }) => {
             />
           </div>
           <h1 className="font-medium text-[24px] font-vivita">
-            {viewData?.modalTitle || "Details"}
+            {viewData?.modalTitle || "Ticket Details"}
           </h1>
           <div className="space-y-[1rem] w-[80%] mx-auto py-10">
-            {Object.keys(viewData).map((key, index) => {
-              if (key === "modalTitle" || key === "ticketNotes") return null;
+            {viewData && Object.keys(viewData).map((key, index) => {
+              if (key === "modalTitle" || key === "ticketNotes" || key === "_id") return null;
+              const value = viewData[key];
+              if (value === undefined || value === null) return null;
 
               return (
                 <div key={index} className="flex justify-between">
-                  <h1>
-                    {key
-                      .replace(/([A-Z])/g, " $1")
-                      .replace(/^./, (str) => str.toUpperCase())}
-                  </h1>
+                  <h1>{key}</h1>
                   <h1
                     className={`px-2 text-sm ${
-                      viewData[key] === "New"
+                      value === "New"
                         ? "text-[#0060A9]"
-                        : viewData[key] === "Resolved"
+                        : value === "Resolved"
                         ? "text-[#00C41F]"
-                        : viewData[key] === "In Progress"
+                        : value === "In Progress"
                         ? "text-[#E8B410]"
-                        : viewData[key] === "Unresolved"
+                        : value === "Unresolved"
                         ? "text-[#DB1C1C]"
                         : ""
                     }`}
                   >
-                    {viewData[key]}
+                    {String(value)}
                   </h1>
                 </div>
               );
@@ -95,7 +93,13 @@ const TicketViewModal = ({ isOpen, onClose, viewData, onAssignClick }) => {
                 Back
               </button>
             ) : (
-              <button className="custom-shadow-button !py-3" onClick={onClose}>
+              <button
+                className="custom-shadow-button !py-3"
+                onClick={() => {
+                  onResolve?.();
+                  onClose();
+                }}
+              >
                 Mark As Resolved
               </button>
             )}
