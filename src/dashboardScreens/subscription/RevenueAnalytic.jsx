@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import CircularStatusBar from "../../common/CircularStatusBar";
-import LineChartComponent from "../../common/LineChart";
+import RevenueLineChart from "../../common/RevenueLineChart";
 import MonthSelectField from "../../common/MonthSelectField";
-import { LineChartData } from "../../../dummyData";
 import { analyticsService } from "../../services/analytics.service";
 import { subscriptionService } from "../../services/subscription.service";
+
+const REVENUE_HISTORY_LENGTH = 12;
 
 const DEFAULT_SUBSCRIPTION_DATA = {
   basic: 0,
@@ -18,6 +19,7 @@ const RevenueAnalytic = () => {
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [revenue, setRevenue] = useState(null);
   const [revenueLoading, setRevenueLoading] = useState(true);
+  const [revenueHistory, setRevenueHistory] = useState([]);
 
   const formatUsd = (value) =>
     new Intl.NumberFormat("en-US", {
@@ -46,12 +48,24 @@ const RevenueAnalytic = () => {
     }
   };
 
+  const pushRevenueToHistory = (revenueData) => {
+    const monthly = revenueData?.monthlyRevenue;
+    const total = revenueData?.totalRevenue;
+    const value = Number.isFinite(monthly) ? monthly : (Number.isFinite(total) ? total : 0);
+    const now = Date.now();
+    setRevenueHistory((prev) => {
+      const next = [...prev, { value: Math.round(value), time: now }];
+      return next.slice(-REVENUE_HISTORY_LENGTH);
+    });
+  };
+
   const fetchRevenue = async (options = {}) => {
     const { silent = false, fresh = false } = options || {};
     try {
       if (!silent) setRevenueLoading(true);
       const data = await subscriptionService.getRevenue({ fresh });
       setRevenue(data || null);
+      pushRevenueToHistory(data || null);
     } catch (err) {
       console.error("Error fetching revenue analytics:", err);
     } finally {
@@ -76,30 +90,41 @@ const RevenueAnalytic = () => {
     revenue?.monthlyRevenue ?? revenue?.totalRevenue ?? 0;
 
   return (
-    <div className="lg:flex gap-4 mb-5">
-      <div className="lg:w-[72%] h-auto space-y-4 flex flex-col">
-        <div className="flex justify-between text-white bg-[#0161A8] py-4 px-8 rounded-[10px]">
-          <h1 className="font-vivita">Revenue</h1>
-          <h1>{revenueLoading ? "Loading..." : formatUsd(currentRevenue)}</h1>
+    <div className="grid grid-cols-1 lg:grid-cols-[72%_1fr] gap-4 mb-5 lg:items-stretch">
+      <div className="flex flex-col gap-4 min-h-0 min-w-0 overflow-hidden">
+        <div className="flex justify-between items-center gap-2 text-white bg-[#0161A8] py-4 px-4 sm:px-8 rounded-[10px] shrink-0 min-w-0">
+          <h1 className="font-vivita truncate">Revenue</h1>
+          <h1 className="font-vivita truncate ml-2 shrink-0">
+            {revenueLoading ? "Loading..." : formatUsd(currentRevenue)}
+          </h1>
         </div>
-        <div className="w-full box-shadow flex-1  global-bg-color rounded-3xl pr-3">
-          <div className="p-2 lg:h-[300px]">
-            <div className="p-5 space-y-2">
-              <h1 className="font-vivita">Revenue Overview</h1>
-              <p className="text-[#669FCB]">
-                This dashboard updates automatically based on active subscriptions.
+        <div className="w-full min-w-0 box-shadow flex-1 flex flex-col min-h-0 global-bg-color rounded-3xl overflow-hidden">
+          <div className="flex flex-col flex-1 min-h-0 overflow-hidden px-4 sm:px-5 pt-4 sm:pt-5">
+            <div className="space-y-2 shrink-0 min-w-0 overflow-hidden">
+              <h1 className="font-vivita truncate">Revenue Overview</h1>
+              <p className="text-[#669FCB] text-sm break-words overflow-hidden">
+                Live trend (last {REVENUE_HISTORY_LENGTH} updates).
               </p>
             </div>
-            <LineChartComponent data={LineChartData} />
+            <div className="flex-1 min-h-[140px] pt-2 pb-4 overflow-hidden">
+              <RevenueLineChart
+                data={revenueHistory.map((point, i, arr) => ({
+                  week: i === arr.length - 1 ? "Now" : new Date(point.time).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+                  revenue: point.value,
+                }))}
+              />
+            </div>
           </div>
         </div>
       </div>
-      <div className="space-y-4 flex-1 lg:my-0 my-2">
+      <div className="flex flex-col gap-4 lg:my-0 my-2 min-w-0 min-h-0 overflow-hidden">
         <MonthSelectField
           setSelectedOption={setSelectedOption}
           selectedOption={selectedOption}
         />
-        <CircularStatusBar data={subscriptionData} loading={subscriptionLoading} />
+        <div className="min-h-0 flex-1 flex flex-col overflow-hidden">
+          <CircularStatusBar data={subscriptionData} loading={subscriptionLoading} />
+        </div>
       </div>
     </div>
   );

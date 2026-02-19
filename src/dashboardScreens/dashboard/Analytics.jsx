@@ -6,14 +6,15 @@ import { SlEnergy } from "react-icons/sl";
 import ActiveInactiveCard from "./Active-InactiveCard";
 import total from "../../assets/total.svg";
 import standardColor from "../../assets/standardColor.svg";
-import LineChartComponent from "../../common/LineChart";
+import RevenueLineChart from "../../common/RevenueLineChart";
 import { alerts } from "../../../dummyData";
-import { LineChartData } from "../../../dummyData";
 import CustomcDropdown from "../../common/custom-dropdown";
 import TIME_OPTIONS from "../../constant";
 import { useAuth } from "../../store/hooks";
 import { analyticsService } from "../../services/analytics.service";
 import { subscriptionService } from "../../services/subscription.service";
+
+const REVENUE_HISTORY_LENGTH = 12;
 
 const DEFAULT_SUBSCRIPTION_DATA = {
   basic: 0,
@@ -27,6 +28,7 @@ const DashboardAnalytics = () => {
   const [revenue, setRevenue] = useState(null);
   const [revenueLoading, setRevenueLoading] = useState(true);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+  const [revenueHistory, setRevenueHistory] = useState([]);
   const { user } = useAuth();
 
   const fetchSubscriptions = async (options = {}) => {
@@ -56,11 +58,23 @@ const DashboardAnalytics = () => {
       const data = await subscriptionService.getRevenue({ fresh });
       setRevenue(data || null);
       setLastUpdatedAt(new Date());
+      pushRevenueToHistory(data || null);
     } catch (err) {
       console.error("Error fetching revenue analytics:", err);
     } finally {
       if (!silent) setRevenueLoading(false);
     }
+  };
+
+  const pushRevenueToHistory = (revenueData) => {
+    const monthly = revenueData?.monthlyRevenue;
+    const total = revenueData?.totalRevenue;
+    const value = Number.isFinite(monthly) ? monthly : (Number.isFinite(total) ? total : 0);
+    const now = Date.now();
+    setRevenueHistory((prev) => {
+      const next = [...prev, { value: Math.round(value), time: now }];
+      return next.slice(-REVENUE_HISTORY_LENGTH);
+    });
   };
 
   useEffect(() => {
@@ -139,7 +153,7 @@ const DashboardAnalytics = () => {
           loading={subscriptionLoading}
         />
       </div>
-      <div className="space-y-3">
+      <div className="space-y-3 flex flex-col min-h-0 min-w-0 h-full">
         {role === "admin" && (
           <>
             <ActiveInactiveCard
@@ -159,30 +173,30 @@ const DashboardAnalytics = () => {
           </>
         )}
         {role === "super-admin" && (
-          <div className="global-bg-color rounded-3xl box-shadow p-3 sm:p-5 space-y-2">
-            <h3 className="font-vivita font-medium my-2 text-base sm:text-lg">
+          <div className="global-bg-color rounded-3xl box-shadow p-3 sm:p-5 flex flex-col min-h-0 h-full overflow-hidden min-w-0">
+            <h3 className="font-vivita font-medium my-2 text-base sm:text-lg shrink-0 truncate">
               Current Revenue:
             </h3>
 
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 shrink-0 min-w-0 overflow-hidden">
               <img
                 src={total}
                 alt="image"
-                className="w-12 h-12 sm:w-auto sm:h-auto"
+                className="w-12 h-12 sm:w-auto sm:h-auto shrink-0"
               />
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                <span className="text-[#0060A9] text-[13px] sm:text-[15px] text-light whitespace-nowrap">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0 overflow-hidden">
+                <span className="text-[#0060A9] text-[13px] sm:text-[15px] text-light truncate">
                   Revenue generated in {monthLabel}
                 </span>
-                <div className="hidden sm:block w-8 h-[3px] rounded-4xl bg-[#0060A9]"></div>
-                <span className="text-[#0060A9] font-semibold whitespace-nowrap">
+                <div className="hidden sm:block w-8 h-[3px] rounded-4xl bg-[#0060A9] shrink-0"></div>
+                <span className="text-[#0060A9] font-semibold truncate shrink-0">
                   {revenueLoading ? "Loading..." : formatUsd(currentRevenue)}
                 </span>
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <div className="text-[12px] sm:text-[14px] whitespace-nowrap">
+            <div className="flex gap-3 shrink-0 min-w-0 overflow-hidden">
+              <div className="text-[12px] sm:text-[14px] break-words overflow-hidden min-w-0">
                 <span className="text-light">Performance alert: </span>
                 <span className="text-[#0060A9]">
                   Live revenue updates based on active subscriptions
@@ -190,8 +204,18 @@ const DashboardAnalytics = () => {
               </div>
             </div>
 
-            <div className="h-[140px] sm:h-[180px] mt-4 -ml-3 sm:-ml-6">
-              <LineChartComponent data={LineChartData} />
+            <div className="mt-2 flex-1 flex flex-col min-h-[120px] overflow-hidden min-w-0">
+              <p className="text-[#669FCB] text-xs sm:text-sm mb-2 shrink-0 break-words overflow-hidden">
+                Live trend (last {REVENUE_HISTORY_LENGTH} updates).
+              </p>
+              <div className="flex-1 min-h-[100px] sm:min-h-[120px] overflow-hidden min-w-0">
+                <RevenueLineChart
+                  data={revenueHistory.map((point, i, arr) => ({
+                    week: i === arr.length - 1 ? "Now" : new Date(point.time).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+                    revenue: point.value,
+                  }))}
+                />
+              </div>
             </div>
 
             <div className="flex items-center space-x-2 text-[12px] sm:text-sm">
@@ -244,8 +268,8 @@ const DashboardAnalytics = () => {
           </div>
         )}
       </div>
-      <div className="flex flex-col gap-3">
-        <div>
+      <div className="flex flex-col gap-3 min-h-0 h-full">
+        <div className="shrink-0">
           <CustomcDropdown
             options={TIME_OPTIONS}
             placeholder="Select Time Period"
@@ -253,9 +277,9 @@ const DashboardAnalytics = () => {
             // onChange={handleTimeChange}
           />
         </div>
-        <div className="space-y-4 global-bg-color rounded-[20px] p-5 box-shadow">
-          <h3 className="font-vivita font-[500]">Critical Alerts:</h3>
-          <div className="space-y-5 max-h-[265px] overflow-scroll">
+        <div className="space-y-4 global-bg-color rounded-[20px] p-5 box-shadow min-h-[265px] flex-1 flex flex-col min-h-0">
+          <h3 className="font-vivita font-[500] shrink-0">Critical Alerts:</h3>
+          <div className="space-y-5 min-h-[220px] flex-1 overflow-auto">
             {alerts.map((alert) => {
               return (
                 <div key={alert.id} className="bg-white  rounded-lg">
