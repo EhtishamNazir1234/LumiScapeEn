@@ -10,25 +10,47 @@ import {
 } from "recharts";
 
 /**
- * Builds scatter data for a single card (one metric): 4 points with slight variation for visual.
+ * Builds scatter data for a single card (one metric).
+ * Number of dots scales with value relative to maxValue:
+ * - highest value → 3 dots
+ * - mid values   → 2 dots
+ * - lowest       → 1 dot
+ * If value is 0, no dots are shown.
+ *
  * @param {number} value - Count for this metric
+ * @param {number} maxValue - Maximum count across all metrics
  * @returns {{ x: number, y: number, z: number }[]}
  */
-const buildCardScatterData = (value = 0) => {
-  const v = Math.max(Number(value) || 0, 1);
-  return [
-    { x: 1, y: v, z: Math.max(v * 0.3, 20) },
-    { x: 2, y: v * 0.92, z: Math.max(v * 0.28, 20) },
-    { x: 3, y: v * 0.97, z: Math.max(v * 0.29, 20) },
-    { x: 4, y: v * 1.05, z: Math.max(v * 0.31, 20) },
-  ];
+const buildCardScatterData = (value = 0, maxValue = 0) => {
+  const v = Number(value) || 0;
+  const max = Number(maxValue) || 0;
+  if (v <= 0 || max <= 0) return [];
+
+  const ratio = v / max;
+  let dots = Math.round(ratio * 3);
+  dots = Math.max(1, Math.min(3, dots));
+
+  const points = [];
+  for (let i = 1; i <= dots; i += 1) {
+    // slight jitter around the base value so dots don't overlap perfectly
+    const jitter = (i - (dots + 1) / 2) * (v * 0.02);
+    points.push({
+      x: i,
+      y: v + jitter,
+      z: 20 + i * 4,
+    });
+  }
+  return points;
 };
 
 /**
- * Small scatter chart for one ticket stat card. Pass value (count) and color (hex).
+ * Small scatter chart for one ticket stat card.
+ * - value: count for this card
+ * - maxValue: max count across all cards (for scaling dot count)
+ * - color: bubble color
  */
-const TicketScatterChart = ({ value = 0, color = "#2A7BB6" }) => {
-  const data = buildCardScatterData(value);
+const TicketScatterChart = ({ value = 0, maxValue = 0, color = "#2A7BB6" }) => {
+  const data = buildCardScatterData(value, maxValue);
 
   return (
     <ResponsiveContainer width="100%" height={130}>

@@ -66,6 +66,9 @@ const TicketOverView = ({ rightAction }) => {
   }
 
   const resolutionRate = stats?.resolutionRate != null ? `${stats.resolutionRate}% resolution rate` : "";
+  const maxCount = Math.max(
+    ...CARD_CONFIG.map((config) => Number(stats?.[config.key] ?? 0))
+  );
 
   return (
     <div className="space-y-4">
@@ -96,7 +99,11 @@ const TicketOverView = ({ rightAction }) => {
               </div>
               <span className="text-light">{trend}</span>
               <div className="h-[130px] mt-4 -ml-6">
-                <TicketScatterChart value={count} color={config.gradient[0]} />
+                <TicketScatterChart
+                  value={count}
+                  maxValue={maxCount}
+                  color={config.gradient[0]}
+                />
               </div>
             </div>
           );
