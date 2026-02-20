@@ -121,7 +121,6 @@ router.get('/:id', async (req, res) => {
 router.post('/', [
   body('type').isIn(['Complaint', 'Bug Report', 'Info Request', 'Feature Request', 'Other']).withMessage('Invalid ticket type'),
   body('ticketNotes').trim().notEmpty().withMessage('Ticket notes are required'),
-  body('userName').trim().notEmpty().withMessage('User name is required')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -147,6 +146,21 @@ router.post('/', [
       if (assignedUser) {
         createPayload.assignedTo = assignedToId;
         createPayload.assignedToName = assignedUser.name;
+      }
+    }
+
+    // Auto-assign end-user / enterprise tickets to any admin/super-admin if not explicitly assigned
+    if (
+      !createPayload.assignedTo &&
+      (req.user.role === 'end-user' || req.user.role === 'enterprise')
+    ) {
+      const autoAssignedUser = await User.findOne({
+        role: { $in: ['super-admin', 'admin'] }
+      }).sort({ createdAt: 1 });
+
+      if (autoAssignedUser) {
+        createPayload.assignedTo = autoAssignedUser._id;
+        createPayload.assignedToName = autoAssignedUser.name;
       }
     }
 
