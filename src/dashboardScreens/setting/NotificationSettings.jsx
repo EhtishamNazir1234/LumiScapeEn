@@ -157,13 +157,25 @@ const NotificationSettings = () => {
 
   return (
     <div className="space-y-7">
-      <div>
-        <h1 className="text-[20px] font-[500] font-vivita">
-          Notification Settings
-        </h1>
-        <p className="text-[#337FBA] text-[15px]">
-          Customise your experience on Lumiscape.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-[20px] font-[500] font-vivita">
+            Notification Settings
+          </h1>
+          <p className="text-[#337FBA] text-[15px]">
+            Customise your experience on Lumiscape.
+          </p>
+        </div>
+        <div className="flex justify-end md:w-[25%] w-full">
+          <button
+            type="button"
+            className="custom-shadow-button font-vivita !py-3 md:!w-full !w-[60%]"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? "Saving…" : "Save Notification Settings"}
+          </button>
+        </div>
       </div>
       {message.text && (
         <div
@@ -213,16 +225,6 @@ const NotificationSettings = () => {
             )}
           </div>
         ))}
-      </div>
-      <div className="flex justify-end">
-        <button
-          type="button"
-          className="custom-shadow-button font-vivita !py-3"
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? "Saving…" : "Save Notification Settings"}
-        </button>
       </div>
     </div>
   );
