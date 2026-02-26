@@ -123,4 +123,32 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// @route   DELETE /api/reports/:id
+// @desc    Delete report
+// @access  Private
+router.delete('/:id', async (req, res) => {
+  try {
+    const report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({ message: 'Report not found' });
+    }
+
+    // Only creator or admin-like roles can delete
+    const isOwner = report.exportedBy.toString() === req.user._id.toString();
+    const isAdminRole = ['super-admin', 'admin'].includes(req.user.role);
+
+    if (!isOwner && !isAdminRole) {
+      return res.status(403).json({ message: 'Not authorized to delete this report' });
+    }
+
+    await Report.findByIdAndDelete(req.params.id);
+
+    res.json({ message: 'Report deleted successfully' });
+  } catch (error) {
+    console.error('Delete report error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 export default router;

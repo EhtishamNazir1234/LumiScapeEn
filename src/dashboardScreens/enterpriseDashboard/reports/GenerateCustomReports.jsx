@@ -1,15 +1,60 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import SelectField from "../../../common/SelectField";
 import InputField from "../../../common/InputField";
 import { PlusIcon } from "../../../assets/icon";
 import CustomDatePicker from "../../../common/DatePicker";
+import { reportService } from "../../../services/report.service";
+
 const GenerateCustomReport = ({ selectedOption }) => {
   const options = [
     { id: "1", label: "admin" },
     { id: "2", label: "superadmin" },
     { id: "3", label: "enterprise" },
   ];
-  const handleGenerate = () => {
-    alert("Report Generated");
+  const formatOptions = [
+    { id: "PDF", label: "PDF" },
+    { id: "Excel", label: "Excel" },
+    { id: "CSV", label: "CSV" },
+    { id: "TXT", label: "TXT" },
+  ];
+
+  const navigate = useNavigate();
+  const [reportName, setReportName] = useState("");
+  const [format, setFormat] = useState("PDF");
+  const [generating, setGenerating] = useState(false);
+
+  const handleGenerate = async () => {
+    if (!reportName) {
+      alert("Please enter a report name.");
+      return;
+    }
+    if (!format) {
+      alert("Please select a format.");
+      return;
+    }
+
+    const type =
+      selectedOption === "Schedule Report" ? "Scheduled" : "On-Demand";
+
+    try {
+      setGenerating(true);
+      await reportService.create({
+        reportName,
+        type,
+        format,
+        parameters: {},
+      });
+      navigate("/reports");
+    } catch (err) {
+      console.error("Error generating report:", err);
+      alert(
+        err?.response?.data?.message ||
+          "Failed to generate report. Please try again."
+      );
+    } finally {
+      setGenerating(false);
+    }
   };
 
   return (
@@ -46,6 +91,8 @@ const GenerateCustomReport = ({ selectedOption }) => {
               type="text"
               placeholder="Enter Report Name"
               color={`#2a7bb6`}
+              value={reportName}
+              onChange={(e) => setReportName(e.target.value)}
             />
           </div>
           {selectedOption === "Schedule Report" && (
@@ -128,7 +175,13 @@ const GenerateCustomReport = ({ selectedOption }) => {
             </div>
           )}
           <div>
-            <SelectField color={`#2a7bb6`} label={`Format`} options={options} />
+            <SelectField
+              color={`#2a7bb6`}
+              label={`Format`}
+              options={formatOptions}
+              selectedOption={format}
+              onChange={(e) => setFormat(e.target.value)}
+            />
           </div>
           <div>
             <SelectField
@@ -157,8 +210,12 @@ const GenerateCustomReport = ({ selectedOption }) => {
 
         <div className="pt-8 flex justify-end">
           <div className="md:w-[25%]">
-            <button onClick={handleGenerate} className=" font-vivita custom-shadow-button h-[140%]">
-              Generate
+            <button
+              onClick={handleGenerate}
+              className=" font-vivita custom-shadow-button h-[140%]"
+              disabled={generating}
+            >
+              {generating ? "Generating..." : "Generate"}
             </button>
           </div>
         </div>
