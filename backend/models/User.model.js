@@ -90,14 +90,6 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpires: {
     type: Date,
     select: false
-  },
-  twoFactorCode: {
-    type: String,
-    select: false
-  },
-  twoFactorExpires: {
-    type: Date,
-    select: false
   }
 }, {
   timestamps: true

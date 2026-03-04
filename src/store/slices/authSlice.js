@@ -78,13 +78,8 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
       })
       .addCase(login.fulfilled, (state, action) => {
-        if (action.payload && action.payload.twoFactorRequired) {
-          state.user = null;
-          state.isAuthenticated = false;
-        } else {
-          state.user = action.payload;
-          state.isAuthenticated = true;
-        }
+        state.user = action.payload;
+        state.isAuthenticated = true;
       })
       .addCase(updateProfile.pending, (state, action) => {
         const { profileImage, name, email, phone } = action.meta?.arg || {};

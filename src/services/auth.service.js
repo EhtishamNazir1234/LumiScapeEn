@@ -3,10 +3,6 @@ import api from './api';
 export const authService = {
   login: async (email, password, rememberMe = false) => {
     const response = await api.post('/auth/login', { email, password, rememberMe });
-    if (response.data.twoFactorRequired) {
-      // 2FA step required: do not store token yet
-      return response.data;
-    }
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('userInfo', JSON.stringify({
@@ -63,30 +59,6 @@ export const authService = {
 
   setNewPassword: async (token, newPassword) => {
     const response = await api.post('/auth/reset-password', { token, newPassword });
-    return response.data;
-  },
-
-  verifyTwoFactor: async (userId, code) => {
-    const response = await api.post('/auth/verify-2fa', { userId, code });
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('userInfo', JSON.stringify({
-        _id: response.data._id,
-        name: response.data.name,
-        email: response.data.email,
-        phone: response.data.phone,
-        role: response.data.role,
-        userId: response.data.userId,
-        subscription: response.data.subscription,
-        subscriptionStatus: response.data.subscriptionStatus,
-        country: response.data.country,
-        status: response.data.status,
-        lastLogin: response.data.lastLogin,
-        profileImage: response.data.profileImage,
-        permissions: response.data.permissions || [],
-        notificationPreferences: response.data.notificationPreferences || undefined,
-      }));
-    }
     return response.data;
   },
 };

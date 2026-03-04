@@ -1,31 +1,11 @@
 import express from 'express';
 import crypto from 'crypto';
 import { body, validationResult } from 'express-validator';
-import twilio from 'twilio';
 import User from '../models/User.model.js';
 import { generateToken } from '../utils/generateToken.js';
 import { protect } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
-
-const generateTwoFactorCode = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
-
-const maskPhone = (phone) => {
-  if (!phone) return '';
-  const clean = phone.toString();
-  if (clean.length <= 4) return clean;
-  const last4 = clean.slice(-4);
-  return `****${last4}`;
-};
-
-const createTwilioClient = () => {
-  const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER } = process.env;
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_FROM_NUMBER) {
-    return null;
-  }
-  return twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-};
 
 // @route   POST /api/auth/register
 // @desc    Register a new user
@@ -82,7 +62,7 @@ router.post('/register', [
 });
 
 // @route   POST /api/auth/login
-// @desc    Authenticate user and start login flow (email or phone). For users with a phone, this will trigger 2FA.
+// @desc    Authenticate user and get token (email or phone)
 // @access  Public
 router.post('/login', [
   body('email').trim().notEmpty().withMessage('Email or phone is required'),
@@ -119,41 +99,7 @@ router.post('/login', [
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const hasPhone = !!user.phone;
-
-    // If user has a phone number, require 2FA instead of issuing token immediately
-    if (hasPhone) {
-      const code = generateTwoFactorCode();
-      user.twoFactorCode = code;
-      user.twoFactorExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
-      if (rememberMe !== undefined) {
-        user.rememberMe = rememberMe;
-      }
-      await user.save({ validateBeforeSave: false });
-
-      const client = createTwilioClient();
-      if (client) {
-        try {
-          await client.messages.create({
-            body: `Your LumiScape verification code is: ${code}`,
-            from: process.env.TWILIO_FROM_NUMBER,
-            to: user.phone,
-          });
-        } catch (smsError) {
-          console.error('Error sending 2FA SMS:', smsError?.message || smsError);
-        }
-      } else if (process.env.NODE_ENV !== 'production') {
-        console.log(`2FA code for ${user.phone}: ${code}`);
-      }
-
-      return res.json({
-        twoFactorRequired: true,
-        userId: user._id,
-        phone: maskPhone(user.phone),
-      });
-    }
-
-    // Fallback: if no phone, proceed with normal login
+    // Update last login and rememberMe, then issue token directly (no 2FA)
     user.lastLogin = new Date();
     if (rememberMe !== undefined) {
       user.rememberMe = rememberMe;
@@ -184,80 +130,6 @@ router.post('/login', [
     res.status(500).json({ message: 'Server error during login' });
   }
 });
-
-// @route   POST /api/auth/verify-2fa
-// @desc    Verify 2FA code and complete login
-// @access  Public
-router.post(
-  '/verify-2fa',
-  [
-    body('userId').trim().notEmpty().withMessage('User ID is required'),
-    body('code').trim().isLength({ min: 4, max: 6 }).withMessage('Invalid code'),
-  ],
-  async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
-      const { userId, code } = req.body;
-      const user = await User.findById(userId).select(
-        '+twoFactorCode +twoFactorExpires'
-      );
-
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      if (!user.twoFactorCode || !user.twoFactorExpires) {
-        return res
-          .status(400)
-          .json({ message: 'No active verification code. Please login again.' });
-      }
-
-      if (user.twoFactorExpires.getTime() < Date.now()) {
-        user.twoFactorCode = undefined;
-        user.twoFactorExpires = undefined;
-        await user.save({ validateBeforeSave: false });
-        return res.status(400).json({ message: 'Code has expired. Please login again.' });
-      }
-
-      if (user.twoFactorCode !== code) {
-        return res.status(400).json({ message: 'Invalid verification code.' });
-      }
-
-      // Clear 2FA fields and update lastLogin
-      user.twoFactorCode = undefined;
-      user.twoFactorExpires = undefined;
-      user.lastLogin = new Date();
-      await user.save({ validateBeforeSave: false });
-
-      const token = generateToken(user._id);
-
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        userId: user.userId,
-        subscription: user.subscription,
-        subscriptionStatus: user.subscriptionStatus,
-        country: user.country,
-        status: user.status,
-        lastLogin: user.lastLogin,
-        profileImage: user.profileImage,
-        permissions: user.permissions || [],
-        notificationPreferences: user.notificationPreferences || undefined,
-        token,
-      });
-    } catch (error) {
-      console.error('Verify 2FA error:', error);
-      res.status(500).json({ message: 'Server error during 2FA verification' });
-    }
-  }
-);
 
 // @route   GET /api/auth/me
 // @desc    Get current logged in user

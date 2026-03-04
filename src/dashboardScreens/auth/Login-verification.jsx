@@ -1,22 +1,11 @@
 import React, { useRef, useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
 import loginImage from "../../assets/login.png";
 import Logo from "../../assets/logo.svg";
-import { authService } from "../../services/auth.service";
-import { checkAuth } from "../../store/slices/authSlice";
-import { getRoleBasedRoute } from "../../utils/roleRouting";
 
 const LoginVerification = () => {
   const inputsRef = useRef([]);
   const [counter, setCounter] = useState(60);
   const [canResend, setCanResend] = useState(false);
-  const [error, setError] = useState("");
-  const location = useLocation();
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-
-  const { userId, phone } = location.state || {};
 
   useEffect(() => {
     if (counter === 0) {
@@ -30,13 +19,6 @@ const LoginVerification = () => {
     return () => clearInterval(timer);
   }, [counter]);
 
-  useEffect(() => {
-    if (!userId) {
-      // No pending 2FA session – go back to login
-      navigate("/login", { replace: true });
-    }
-  }, [userId, navigate]);
-
   const handleResend = () => {
     setCounter(60);
     setCanResend(false);
@@ -44,8 +26,6 @@ const LoginVerification = () => {
       if (input) input.value = "";
     });
     inputsRef.current = [];
-    setError("");
-    // In a real app, we'd call a /auth/resend-2fa endpoint here.
     console.log("Resend code requested");
   };
 
@@ -66,25 +46,10 @@ const LoginVerification = () => {
       inputsRef.current[index - 1].focus();
     }
   };
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setError("");
     const otp = inputsRef.current.map((input) => input.value).join("");
-    if (otp.length < 4) {
-      setError("Please enter the full verification code.");
-      return;
-    }
-    try {
-      const data = await authService.verifyTwoFactor(userId, otp);
-      await dispatch(checkAuth());
-      const route = getRoleBasedRoute(data?.role);
-      navigate(route || "/", { replace: true });
-    } catch (err) {
-      setError(
-        err?.response?.data?.message ||
-          "Verification failed. Please check the code and try again."
-      );
-    }
+    console.log("Entered OTP:", otp);
   };
 
   return (
@@ -112,25 +77,14 @@ const LoginVerification = () => {
             className="bg-white bg-opacity-90 rounded-2xl px-8  sm:py-15 py-11 w-full "
             style={{ boxShadow: "inset 0 0px 4px rgba(0, 0, 0, 0.6)" }}
           >
-            <div className="text-center sm:mb-10 mb-4">
+            <div className="text-center sm:mb-10 mb-8">
               <h2 className="text-2xl font-semibold text-center">
                 Verify Your Identity
               </h2>
               <p className="text-[#0060A9]  sm:text-sm text-[12px]">
-                Enter the verification code sent to your phone
+                Enter the verification code sent to your email/phone
               </p>
-              {phone && (
-                <p className="text-xs text-[#337FBA] mt-1">
-                  Code sent to: <span className="font-semibold">{phone}</span>
-                </p>
-              )}
             </div>
-
-            {error && (
-              <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded text-xs">
-                {error}
-              </div>
-            )}
 
             <form className="sm:space-y-10 space-y-8" onSubmit={handleSubmit}>
               <div className="flex justify-center xl:space-x-5 md:space-x-2  space-x-1 sm:my-10 my-8">

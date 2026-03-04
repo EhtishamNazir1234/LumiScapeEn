@@ -28,17 +28,6 @@ const Login = () => {
 
     try {
       const userData = await login(emailOrPhone.trim(), password, rememberMe);
-
-      if (userData?.twoFactorRequired) {
-        navigate("/login-verification", {
-          state: {
-            userId: userData.userId,
-            phone: userData.phone || userData.maskedPhone || emailOrPhone.trim(),
-          },
-        });
-        return;
-      }
-
       const roleBasedRoute = getRoleBasedRoute(userData?.role);
       navigate(roleBasedRoute);
     } catch (err) {
