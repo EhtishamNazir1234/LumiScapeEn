@@ -34,7 +34,17 @@ const Notifications = ({ onClose }) => {
             Mark all read
           </button>
         )}
-        <IoSettingsOutline size={25} />
+        <button
+          type="button"
+          onClick={() => {
+            onClose?.();
+            navigate("/notification-settings");
+          }}
+          className="p-1 rounded hover:bg-gray-100 text-[#0060A9]"
+          aria-label="Notification settings"
+        >
+          <IoSettingsOutline size={25} />
+        </button>
       </div>
 
       <div className="space-y-4 md:my-7 my-4 max-h-[70vh] overflow-auto scrollbar-hide">

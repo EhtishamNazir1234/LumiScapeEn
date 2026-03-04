@@ -28,7 +28,6 @@ const Login = () => {
 
     try {
       const userData = await login(emailOrPhone.trim(), password, rememberMe);
-      // Redirect based on user role
       const roleBasedRoute = getRoleBasedRoute(userData?.role);
       navigate(roleBasedRoute);
     } catch (err) {

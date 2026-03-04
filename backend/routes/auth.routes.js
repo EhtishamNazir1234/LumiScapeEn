@@ -1,11 +1,64 @@
 import express from 'express';
 import crypto from 'crypto';
 import { body, validationResult } from 'express-validator';
+import nodemailer from 'nodemailer';
 import User from '../models/User.model.js';
 import { generateToken } from '../utils/generateToken.js';
 import { protect } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
+
+const createMailTransport = () => {
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM_EMAIL } = process.env;
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS || !SMTP_FROM_EMAIL) {
+    return null;
+  }
+  return nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: Number(SMTP_PORT),
+    secure: Number(SMTP_PORT) === 465,
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+  });
+};
+
+const sendLoginEmailIfEnabled = async (user) => {
+  try {
+    if (!user?.email) return;
+    const prefs = user.notificationPreferences;
+    if (prefs && prefs.emailAlerts === false) return;
+
+    const transport = createMailTransport();
+    if (!transport) return;
+
+    const from = process.env.SMTP_FROM_EMAIL;
+    const loginTime = new Date().toLocaleString();
+
+    await transport.sendMail({
+      from,
+      to: user.email,
+      subject: 'New login to your LumiScape account',
+      text: `Hi ${user.name || ''},
+
+A new login to your LumiScape account was detected at ${loginTime}.
+
+If this was you, you can safely ignore this email.
+If this wasn't you, please review your account security and consider changing your password.
+
+— LumiScape`,
+      html: `<p>Hi ${user.name || ''},</p>
+<p>A new login to your <strong>LumiScape</strong> account was detected at <strong>${loginTime}</strong>.</p>
+<p>If this was you, you can safely ignore this email.<br/>
+If this wasn't you, please review your account security and consider changing your password.</p>
+<p>— LumiScape</p>`,
+    });
+  } catch (err) {
+    // Log and continue without failing login
+    console.error('Login email notification error:', err?.message || err);
+  }
+};
 
 // @route   POST /api/auth/register
 // @desc    Register a new user
@@ -99,17 +152,16 @@ router.post('/login', [
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Update last login
+    // Update last login and rememberMe
     user.lastLogin = new Date();
     if (rememberMe !== undefined) {
       user.rememberMe = rememberMe;
     }
     await user.save();
 
-    // Generate token
     const token = generateToken(user._id);
 
-    res.json({
+    const responsePayload = {
       _id: user._id,
       name: user.name,
       email: user.email,
@@ -125,7 +177,12 @@ router.post('/login', [
       permissions: user.permissions || [],
       notificationPreferences: user.notificationPreferences || undefined,
       token
-    });
+    };
+
+    // Fire-and-forget login email if user has enabled email alerts
+    sendLoginEmailIfEnabled(user).catch(() => {});
+
+    res.json(responsePayload);
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Server error during login' });
