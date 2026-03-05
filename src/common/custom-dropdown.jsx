@@ -169,7 +169,7 @@ const CustomcDropdown = ({
 
             {/* Dropdown Arrow */}
             <ChevronDown
-              className={`w-4 h-4 sm:w-5 sm:h-5 text-blue-500 transition-transform duration-200 cursor-pointer flex-shrink-0 ml-1 sm:ml-2 ${
+              className={`w-4 h-4 sm:w-5 sm:h-5 text-[#0060A9] transition-transform duration-200 cursor-pointer flex-shrink-0 ml-1 sm:ml-2 ${
                 isOpen ? "rotate-180" : ""
               }`}
               onClick={() => setIsOpen(!isOpen)}
@@ -185,7 +185,9 @@ const CustomcDropdown = ({
                   type="button"
                   onClick={() => handleSelect(option.value)}
                   className={`w-full px-3 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-left text-xs sm:text-sm md:text-base hover:bg-gray-50 focus:bg-gray-50 focus:outline-none transition-colors duration-150 first:rounded-t-xl last:rounded-b-xl ${
-                    selectedValue === option.value ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-900"
+                    selectedValue === option.value
+                      ? "bg-[#E4EDF6] text-[#0060A9] font-vivita"
+                      : "text-gray-900 font-vivita"
                   }`}
                 >
                   {option.label}
@@ -202,15 +204,21 @@ const CustomcDropdown = ({
             type="button"
             onClick={() => !disabled && setIsOpen(!isOpen)}
             disabled={disabled}
-            className={`w-full global-bg-color box-shadow  px-3 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 flex items-center justify-between text-left text-gray-900 font-medium text-xs sm:text-sm md:text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer ${
+            className={`w-full global-bg-color box-shadow  px-3 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 flex items-center justify-between text-left text-gray-900 font-medium text-xs sm:text-sm md:text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#0060A9] focus:border-[#0060A9] cursor-pointer ${
               disabled ? "opacity-50 cursor-not-allowed" : ""
-            } ${isOpen ? "ring-2 ring-blue-500 border-blue-500" : ""}
+            } ${isOpen ? "ring-2 ring-[#0060A9] border-[#0060A9]" : ""}
             ${rounded ? "rounded-full" : "rounded-xl"}`
           }
           >
-            <span className={`truncate ${selectedOption ? "text-gray-900" : "text-gray-500"}`}>{displayText}</span>
+            <span
+              className={`truncate font-vivita ${
+                selectedOption ? "text-[#0060A9]" : "text-gray-500"
+              }`}
+            >
+              {displayText}
+            </span>
             <ChevronDown
-              className={`w-4 h-4 sm:w-5 sm:h-5 text-blue-500 transition-transform duration-200 flex-shrink-0 ml-2 ${
+              className={`w-4 h-4 sm:w-5 sm:h-5 text-[#0060A9] transition-transform duration-200 flex-shrink-0 ml-2 ${
                 isOpen ? "rotate-180" : ""
               }`}
             />
@@ -231,7 +239,9 @@ const CustomcDropdown = ({
                     type="button"
                     onClick={() => handleSelect(option.value)}
                     className={`w-full px-3 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-left text-xs sm:text-sm md:text-base hover:bg-gray-50 focus:bg-gray-50 focus:outline-none transition-colors duration-150 first:rounded-t-xl last:rounded-b-xl ${
-                      selectedValue === option.value ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-900"
+                      selectedValue === option.value
+                        ? "bg-[#E4EDF6] text-[#0060A9] font-vivita"
+                        : "text-gray-900 font-vivita"
                     }`}
                   >
                     {option.label}
