@@ -36,18 +36,40 @@ const NavBar = () => {
   }, []);
 
   return (
-    <div className="flex md:justify-between justify-end xl:mt-9 xl:my-4 my-4">
-      <div className="sm:block hidden leading-8">
-        <h1 className="font-[500px] xl:text-2xl text-lg  font-vivita">
+    <div className="flex items-center justify-start md:justify-between mt-2 mb-1 sm:mt-4 sm:mb-4 xl:mt-9 xl:mb-4 pl-14 lg:pl-0">
+      {/* Mobile: only show welcome line */}
+      <div className="block sm:hidden leading-4 mr-1">
+        <h1 className="font-[500px] text-[11px] font-vivita">
+          Welcome {user?.name || "Admin"}!
+        </h1>
+      </div>
+
+      {/* Tablet / Desktop: full heading + subtitle */}
+      <div className="hidden sm:block leading-6 sm:leading-8 mr-4">
+        <h1 className="font-[500px] xl:text-2xl text-lg font-vivita">
           Welcome {user?.name || "Admin"}!
         </h1>
         <p className="text-[#337FBA] font-[300px] xl:text-base text-[14px] font-Geom">
           Manage users, devices, and system performance effortlessly.
         </p>
       </div>
-      <div className="flex gap-4 relative items-center">
-        <Link to="/chat" className="relative p-0 border-0 bg-transparent cursor-pointer inline-block" aria-label={totalUnreadChatMessages > 0 ? `${totalUnreadChatMessages} unread chat messages` : "Chat"}>
-          <img src={chatIcon} width={25} height={25} alt="Chat" />
+      <div className="flex gap-4 relative items-center mt-[2px] sm:mt-0">
+        <Link
+          to="/chat"
+          className="relative p-0 border-0 bg-transparent cursor-pointer inline-block"
+          aria-label={
+            totalUnreadChatMessages > 0
+              ? `${totalUnreadChatMessages} unread chat messages`
+              : "Chat"
+          }
+        >
+          <img
+            src={chatIcon}
+            width={25}
+            height={25}
+            alt="Chat"
+            className="w-5 h-5 sm:w-[25px] sm:h-[25px]"
+          />
           {totalUnreadChatMessages > 0 && (
             <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-medium px-1">
               {totalUnreadChatMessages > 99 ? "99+" : totalUnreadChatMessages}
@@ -61,7 +83,13 @@ const NavBar = () => {
             className="relative p-0 border-0 bg-transparent cursor-pointer"
             aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"}
           >
-            <img src={notification} width={25} height={25} alt="" />
+            <img
+              src={notification}
+              width={25}
+              height={25}
+              alt=""
+              className="w-5 h-5 sm:w-[25px] sm:h-[25px]"
+            />
             {unreadCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-medium px-1">
                 {unreadCount > 99 ? "99+" : unreadCount}
@@ -85,7 +113,7 @@ const NavBar = () => {
             alt="Profile"
             width={50}
             height={50}
-            className="w-[50px] h-[50px] object-cover rounded-full"
+            className="w-8 h-8 sm:w-[50px] sm:h-[50px] object-cover rounded-full"
           />
         </Link>
       </div>

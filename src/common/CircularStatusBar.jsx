@@ -49,7 +49,9 @@ const CircularStatusBar = ({ data = { basic: 0, standard: 0, premium: 0 }, loadi
 
   return (
     <div
-      className={`rounded-3xl w-full p-5 global-bg-color box-shadow ${loading ? "opacity-70 pointer-events-none" : ""}`}
+      className={`rounded-3xl w-full h-full flex flex-col p-5 global-bg-color box-shadow ${
+        loading ? "opacity-70 pointer-events-none" : ""
+      }`}
     >
       <h1 className="font-vivita my-2 font-[500]">Active Subscriptions</h1>
       <div className="flex gap-3">
@@ -133,20 +135,23 @@ const CircularStatusBar = ({ data = { basic: 0, standard: 0, premium: 0 }, loadi
         </div>
       </div>
 
-      <div className="mt-1">
-        {transformData.map((item) => {
-          return (
-            <div key={item.name} className="flex items-center space-x-2 mx-1 my-2">
-              <img src={item.image} alt="image" />
-              <span className="#0060A9 text-[14px]">{item.name} users</span>
-              <div
-                className="flex-grow h-[2px]"
-                style={{ backgroundColor: item.color }}
-              ></div>
-              <span className="text-[14px]">{item.value}</span>
-            </div>
-          );
-        })}
+      <div className="mt-1 flex-1 flex flex-col justify-between">
+        {transformData.map((item) => (
+          <div
+            key={item.name}
+            className="flex items-center space-x-2 mx-1 my-1"
+          >
+            <img src={item.image} alt="image" />
+            <span className="text-[#0060A9] text-[14px] whitespace-nowrap">
+              {item.name} users
+            </span>
+            <div
+              className="flex-grow h-[2px]"
+              style={{ backgroundColor: item.color }}
+            ></div>
+            <span className="text-[14px]">{item.value}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
