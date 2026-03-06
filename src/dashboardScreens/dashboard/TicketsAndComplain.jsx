@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { IoEyeOutline } from "react-icons/io5";
 import { MdOutlineAssignment } from "react-icons/md";
 import TicketViewModal from "../tickets&Complaients/TicketViewModal";
 import { ticketService } from "../../services/ticket.service";
 
-const TicketsAndComplain = () => {
+const TicketsAndComplain = ({ searchQuery = "", statusFilters = [] }) => {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -15,8 +15,11 @@ const TicketsAndComplain = () => {
     try {
       setLoading(true);
       setError("");
-      // Fetch latest tickets (limit to a small number for the dashboard widget)
-      const response = await ticketService.getAll({ page: 1, limit: 5 });
+      const params = { page: 1, limit: 5 };
+      if (searchQuery) {
+        params.search = searchQuery;
+      }
+      const response = await ticketService.getAll(params);
       setTickets(response.tickets || response || []);
     } catch (err) {
       console.error("Error fetching dashboard tickets:", err);
@@ -29,7 +32,7 @@ const TicketsAndComplain = () => {
 
   useEffect(() => {
     fetchTickets();
-  }, []);
+  }, [searchQuery]);
 
   const buildViewData = (ticket) => {
     if (!ticket) return null;
@@ -54,6 +57,20 @@ const TicketsAndComplain = () => {
       _id: ticket._id,
     };
   };
+
+  const filteredTickets = useMemo(() => {
+    if (!tickets) return [];
+
+    // If no status filters selected, show all
+    if (!statusFilters || statusFilters.length === 0) {
+      return tickets;
+    }
+
+    return tickets.filter((ticket) => {
+      const status = ticket.status || "New";
+      return statusFilters.includes(status);
+    });
+  }, [tickets, statusFilters]);
 
   return (
     <div className="overflow-x-auto my-7">
@@ -81,14 +98,14 @@ const TicketsAndComplain = () => {
                 {error}
               </td>
             </tr>
-          ) : tickets.length === 0 ? (
+          ) : filteredTickets.length === 0 ? (
             <tr>
               <td colSpan={6} className="py-4 text-center text-sm text-gray-500">
                 No tickets found.
               </td>
             </tr>
           ) : (
-            tickets.map((ticket) => {
+            filteredTickets.map((ticket) => {
               const assignedToText =
                 ticket.assignedToName ||
                 ticket.assignedTo?.name ||
