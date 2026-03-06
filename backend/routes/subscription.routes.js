@@ -318,19 +318,101 @@ router.post('/', [
 });
 
 // @route   GET /api/subscriptions/revenue
-// @desc    Get revenue analytics
+// @desc    Get revenue analytics (optionally filtered by time period)
 // @access  Private (Admin/Super-admin)
 router.get('/revenue', authorize('super-admin', 'admin'), async (req, res) => {
   try {
+    const { period, startDate, endDate } = req.query;
+
+    let dateFilter = {};
+    const now = new Date();
+
+    const parseDate = (value) => {
+      if (!value) return null;
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+
+    if (period) {
+      let start = null;
+      let end = null;
+
+      switch (period) {
+        case 'thisMonth': {
+          start = new Date(now.getFullYear(), now.getMonth(), 1);
+          end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+          break;
+        }
+        case 'last7d': {
+          start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          end = now;
+          break;
+        }
+        case 'last14d': {
+          start = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+          end = now;
+          break;
+        }
+        case 'lastMonth': {
+          const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          end = firstOfThisMonth;
+          break;
+        }
+        case 'last3Month': {
+          start = new Date(now);
+          start.setMonth(start.getMonth() - 3);
+          end = now;
+          break;
+        }
+        case 'last6Month': {
+          start = new Date(now);
+          start.setMonth(start.getMonth() - 6);
+          end = now;
+          break;
+        }
+        case 'lastYear': {
+          start = new Date(now);
+          start.setFullYear(start.getFullYear() - 1);
+          end = now;
+          break;
+        }
+        case 'range': {
+          start = parseDate(startDate);
+          end = parseDate(endDate);
+          break;
+        }
+        default:
+          break;
+      }
+
+      if (start) {
+        dateFilter.$gte = start;
+      }
+      if (end) {
+        dateFilter.$lt = end;
+      }
+    } else {
+      const s = parseDate(startDate);
+      const e = parseDate(endDate);
+      if (s) dateFilter.$gte = s;
+      if (e) dateFilter.$lt = e;
+    }
+
+    const baseMatch = { status: 'Active' };
+    if (Object.keys(dateFilter).length > 0) {
+      baseMatch.startDate = dateFilter;
+    }
+
     const totalRevenue = await Subscription.aggregate([
-      { $match: { status: 'Active' } },
+      { $match: baseMatch },
       { $group: { _id: null, total: { $sum: '$price' } } }
     ]);
 
     const monthlyRevenue = await Subscription.aggregate([
       {
         $match: {
-          status: 'Active',
+          ...baseMatch,
           billingCycle: 'monthly'
         }
       },
@@ -340,7 +422,7 @@ router.get('/revenue', authorize('super-admin', 'admin'), async (req, res) => {
     const annualRevenue = await Subscription.aggregate([
       {
         $match: {
-          status: 'Active',
+          ...baseMatch,
           billingCycle: 'annual'
         }
       },

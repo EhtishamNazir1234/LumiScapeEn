@@ -73,13 +73,20 @@ export const subscriptionService = {
   },
 
   getRevenue: async (options = {}) => {
-    const { fresh = false } = options || {};
-    if (!fresh && isRevenueCacheValid()) {
+    const { fresh = false, params = {} } = options || {};
+    const hasParams = params && Object.keys(params).length > 0;
+
+    if (!fresh && !hasParams && isRevenueCacheValid()) {
       return revenueCache.data;
     }
-    const response = await api.get('/subscriptions/revenue');
-    revenueCache.data = response.data;
-    revenueCache.timestamp = Date.now();
+
+    const response = await api.get('/subscriptions/revenue', { params });
+
+    if (!hasParams) {
+      revenueCache.data = response.data;
+      revenueCache.timestamp = Date.now();
+    }
+
     return response.data;
   }
 };

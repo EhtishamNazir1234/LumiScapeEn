@@ -29,6 +29,8 @@ const DashboardAnalytics = () => {
   const [revenueLoading, setRevenueLoading] = useState(true);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
   const [revenueHistory, setRevenueHistory] = useState([]);
+  const [selectedTimeFilter, setSelectedTimeFilter] = useState(null);
+  const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
   const { user } = useAuth();
 
   const fetchSubscriptions = async (options = {}) => {
@@ -51,11 +53,43 @@ const DashboardAnalytics = () => {
     }
   };
 
+  const buildRevenueParams = (filterLabel, rangeData) => {
+    if (!filterLabel) return {};
+    switch (filterLabel) {
+      case "This Month":
+        return { period: "thisMonth" };
+      case "Last 7 days":
+        return { period: "last7d" };
+      case "Last 14 days":
+        return { period: "last14d" };
+      case "Last Month":
+        return { period: "lastMonth" };
+      case "Last 3 Month":
+        return { period: "last3Month" };
+      case "Last 6 Month":
+        return { period: "last6Month" };
+      case "Last year":
+        return { period: "lastYear" };
+      case "Date Range": {
+        const start = rangeData?.startDate
+          ? rangeData.startDate.toISOString()
+          : undefined;
+        const end = rangeData?.endDate
+          ? rangeData.endDate.toISOString()
+          : undefined;
+        return { period: "range", ...(start && { startDate: start }), ...(end && { endDate: end }) };
+      }
+      default:
+        return {};
+    }
+  };
+
   const fetchRevenue = async (options = {}) => {
-    const { silent = false, fresh = false } = options || {};
+    const { silent = false, fresh = false, filterLabel = selectedTimeFilter, rangeData = dateRange } = options || {};
     try {
       if (!silent) setRevenueLoading(true);
-      const data = await subscriptionService.getRevenue({ fresh });
+      const params = buildRevenueParams(filterLabel, rangeData);
+      const data = await subscriptionService.getRevenue({ fresh, params });
       setRevenue(data || null);
       setLastUpdatedAt(new Date());
       pushRevenueToHistory(data || null);
@@ -127,7 +161,66 @@ const DashboardAnalytics = () => {
         return null;
     }
   };
-  
+
+  const handleTimeChange = (value, dateData) => {
+    setSelectedTimeFilter(value);
+    if (value === "Date Range") {
+      setDateRange({
+        startDate: dateData?.startDate || null,
+        endDate: dateData?.endDate || null,
+      });
+    } else {
+      setDateRange({ startDate: null, endDate: null });
+    }
+    fetchRevenue({ filterLabel: value, rangeData: dateData });
+  };
+
+  const getRevenuePeriodLabel = () => {
+    if (!selectedTimeFilter || selectedTimeFilter === "This Month") {
+      return `Revenue generated in ${monthLabel}`;
+    }
+
+    const now = new Date();
+    const formatMonth = (d) =>
+      d.toLocaleString("en-US", { month: "long", year: "numeric" });
+
+    switch (selectedTimeFilter) {
+      case "Last Month": {
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        return `Revenue generated in ${formatMonth(lastMonth)}`;
+      }
+      case "Last 7 days":
+      case "Last 14 days":
+      case "Last 3 Month":
+      case "Last 6 Month":
+      case "Last year":
+        return `Revenue generated in ${selectedTimeFilter}`;
+      case "Date Range": {
+        const { startDate, endDate } = dateRange || {};
+        if (startDate && endDate) {
+          const startStr = startDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "2-digit",
+          });
+          const endStr = endDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "2-digit",
+          });
+          return `Revenue generated from ${startStr} to ${endStr}`;
+        }
+        if (startDate) {
+          const startStr = startDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "2-digit",
+          });
+          return `Revenue generated since ${startStr}`;
+        }
+        return "Revenue generated in selected range";
+      }
+      default:
+        return `Revenue generated in ${monthLabel}`;
+    }
+  };
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
       <div className="relative h-full">
@@ -175,7 +268,7 @@ const DashboardAnalytics = () => {
         {role === "super-admin" && (
           <div className="global-bg-color rounded-3xl box-shadow p-3 sm:p-5 flex flex-col min-h-0 h-full overflow-hidden min-w-0">
             <h3 className="font-vivita font-medium my-2 text-base sm:text-lg shrink-0 truncate">
-              Current Revenue:
+              {getRevenuePeriodLabel()}
             </h3>
 
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 shrink-0 min-w-0 overflow-hidden">
@@ -186,7 +279,7 @@ const DashboardAnalytics = () => {
               />
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0 overflow-hidden">
                 <span className="text-[#0060A9] text-[13px] sm:text-[15px] text-light truncate">
-                  Revenue generated in {monthLabel}
+                  {getRevenuePeriodLabel()}
                 </span>
                 <div className="hidden sm:block w-8 h-[3px] rounded-4xl bg-[#0060A9] shrink-0"></div>
                 <span className="text-[#0060A9] font-semibold truncate shrink-0">
@@ -273,8 +366,8 @@ const DashboardAnalytics = () => {
           <CustomcDropdown
             options={TIME_OPTIONS}
             placeholder="Select Time Period"
-            // value={selectedTime}
-            // onChange={handleTimeChange}
+            value={selectedTimeFilter}
+            onChange={handleTimeChange}
           />
         </div>
         <div className="space-y-4 global-bg-color rounded-[20px] p-5 box-shadow min-h-[265px] flex-1 flex flex-col min-h-0">
