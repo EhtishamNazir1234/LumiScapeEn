@@ -86,6 +86,9 @@ router.get('/dashboard', authorize('super-admin', 'admin'), async (req, res) => 
 // @access  Private (Admin/Super-admin)
 router.get('/system', authorize('super-admin', 'admin'), async (req, res) => {
   try {
+    const managerRoles = ['super-admin', 'admin'];
+    const endUserRoles = ['end-user', 'enterprise'];
+
     // Device usage analytics
     const deviceUsage = await Device.aggregate([
       {
@@ -120,10 +123,53 @@ router.get('/system', authorize('super-admin', 'admin'), async (req, res) => {
       }
     ]);
 
+    // User activity over last 4 weeks (managers vs end users)
+    const now = new Date();
+    const startOfCurrentWeek = new Date(now);
+    startOfCurrentWeek.setHours(0, 0, 0, 0);
+    const dayOfWeek = startOfCurrentWeek.getDay(); // 0 (Sun) - 6 (Sat)
+    startOfCurrentWeek.setDate(startOfCurrentWeek.getDate() - dayOfWeek);
+
+    const weekRanges = [];
+    for (let i = 3; i >= 0; i--) {
+      const start = new Date(startOfCurrentWeek);
+      start.setDate(start.getDate() - 7 * i);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 7);
+      weekRanges.push({
+        label: `Week ${4 - i}`,
+        start,
+        end,
+      });
+    }
+
+    const userActivityOverTime = [];
+    for (const range of weekRanges) {
+      const [managers, endUsers] = await Promise.all([
+        User.countDocuments({
+          role: { $in: managerRoles },
+          status: { $ne: 'Archived' },
+          createdAt: { $gte: range.start, $lt: range.end },
+        }),
+        User.countDocuments({
+          role: { $in: endUserRoles },
+          status: { $ne: 'Archived' },
+          createdAt: { $gte: range.start, $lt: range.end },
+        }),
+      ]);
+
+      userActivityOverTime.push({
+        name: range.label,
+        managers,
+        endUsers,
+      });
+    }
+
     res.json({
       deviceUsage,
       userRoles,
-      ticketTypes
+      ticketTypes,
+      userActivityOverTime,
     });
   } catch (error) {
     console.error('Get system analytics error:', error);
