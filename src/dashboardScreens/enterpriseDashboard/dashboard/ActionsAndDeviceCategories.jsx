@@ -4,7 +4,6 @@ import CustomDropdown from "../../../common/custom-dropdown";
 import UsageProgressBar from "./UsageProgressBar";
 import QuickActions from "./QuickActions";
 import CustomDeviceCategories from "./CustomDeviceCategories";
-import MyPhoneCard from "./MyPhoneCard";
 
 const ActionsAndDeviceCategories = () => {
   const [selectedTime, setSelectedTime] = useState("This Month");
@@ -25,7 +24,6 @@ const ActionsAndDeviceCategories = () => {
       />
       <UsageProgressBar />
       <QuickActions />
-      <MyPhoneCard />
       <CustomDeviceCategories />
     </div>
   );

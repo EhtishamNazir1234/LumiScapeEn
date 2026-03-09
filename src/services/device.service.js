@@ -52,16 +52,6 @@ export const deviceService = {
     return response.data;
   },
 
-  registerPhone: async (payload = {}) => {
-    const response = await api.post('/devices/register-phone', payload);
-    return response.data;
-  },
-
-  getMyPhone: async () => {
-    const response = await api.get('/devices/my-phone');
-    return response.data;
-  },
-
   togglePhonePower: async (id, isOn) => {
     const response = await api.patch(`/devices/${id}/toggle-power`, { isOn });
     return response.data;
