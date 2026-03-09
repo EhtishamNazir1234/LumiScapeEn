@@ -5,8 +5,8 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node -r dotenv/config server.js",
-    "dev": "nodemon -r dotenv/config server.js",
+    "start": "node api.js && node -r dotenv/config server.js",
+    "dev": "node api.js && nodemon -r dotenv/config server.js",
     "seed:plans": "node scripts/seedPlans.js"
   },
   "keywords": [
