@@ -8,8 +8,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import jwt from 'jsonwebtoken';
 import User from './models/User.model.js';
-
-// Import routes
+// Import routes (Stripe etc. need env; use DOTENV_CONFIG_PATH=../.env in npm scripts so -r dotenv/config loads repo-root .env before these run)
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import supplierRoutes from './routes/supplier.routes.js';
@@ -25,11 +24,9 @@ import analyticsRoutes from './routes/analytics.routes.js';
 import enterpriseRoutes from './routes/enterprise.routes.js';
 import helpCenterRoutes from './routes/helpCenter.routes.js';
 
-// Load environment variables
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '..', '.env') });
 
 const app = express();
 
