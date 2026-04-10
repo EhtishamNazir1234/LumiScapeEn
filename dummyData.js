@@ -1191,6 +1191,7 @@ import Image2 from "./src/assets/ArticleImages/Image2.jpg";
 import Image3 from "./src/assets/ArticleImages/Image3.jpg";
 import Image4 from "./src/assets/ArticleImages/Image4.jpg";
 import Image5 from "./src/assets/ArticleImages/Image5.jpg";
+import { defaultLocationWidgetItems } from "./src/plugins/location-widget";
 
 export const articleCards = [
   {
@@ -1321,32 +1322,7 @@ export const consumingDevices = [
     progress: 50,
   },
 ];
-export const locations = [
-  {
-    id: 1,
-    localCategory: "Buildings",
-    count: "5",
-    consumptions: "21.4 kWh",
-  },
-  {
-    id: 2,
-    localCategory: "Floors",
-    count: "55",
-    consumptions: "21.4 kWh",
-  },
-  {
-    id: 3,
-    localCategory: "Rooms",
-    count: "505",
-    consumptions: "21.4 kWh",
-  },
-  {
-    id: 4,
-    localCategory: "Zones",
-    count: "5",
-    consumptions: "21.5 kWh",
-  },
-];
+export const locations = defaultLocationWidgetItems;
 export const barUsage = [
   {
     id: 1,
