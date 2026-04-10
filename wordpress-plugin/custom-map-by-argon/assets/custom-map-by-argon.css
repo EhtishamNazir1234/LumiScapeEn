@@ -1,0 +1,286 @@
+/**
+ * Custom Map by Argon — front-end styles
+ */
+
+.cmba-root {
+  --cmba-blue: #2a6fb8;
+  --cmba-blue-hover: #235a96;
+  --cmba-yellow: #f5d547;
+  --cmba-yellow-hover: #e8c93a;
+  --cmba-ink: #0f172a;
+  --cmba-muted: #94a3b8;
+  --cmba-border: rgba(255, 255, 255, 0.12);
+
+  max-width: 960px;
+  margin: 1.5rem auto;
+  padding: 1.25rem;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: #fff;
+  background: #0a0a0a;
+  border: 1px solid var(--cmba-border);
+  border-radius: 12px;
+}
+
+.cmba-brand {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--cmba-border);
+}
+
+.cmba-brand-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.cmba-brand-by {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--cmba-muted);
+}
+
+/* Header block (kicker / title / intro) */
+.cmba-header-row {
+  margin-bottom: 1.25rem;
+}
+
+.cmba-header-block {
+  text-align: center;
+}
+
+.cmba-layout--header-right .cmba-col-side .cmba-header-block {
+  text-align: left;
+}
+
+.cmba-kicker {
+  display: inline-block;
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #e2e8f0;
+  border-bottom: 2px solid var(--cmba-yellow);
+  padding-bottom: 0.2rem;
+}
+
+.cmba-title {
+  margin: 0.35rem 0 0.75rem;
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  font-weight: 600;
+  line-height: 1.2;
+  font-family: Georgia, "Times New Roman", serif;
+  color: #f8fafc;
+}
+
+.cmba-intro {
+  margin: 0 auto;
+  max-width: 42rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: #cbd5e1;
+}
+
+.cmba-layout--header-right .cmba-col-side .cmba-intro {
+  margin: 0 0 1rem;
+  max-width: none;
+}
+
+/* Two columns — no minmax() */
+.cmba-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .cmba-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Map placeholder — no Leaflet zoom (+/-) */
+.cmba-map {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  min-height: 220px;
+  background: linear-gradient(160deg, #1e293b 0%, #0f172a 50%, #334155 100%);
+  border: 1px solid var(--cmba-border);
+}
+
+.cmba-map-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cmba-map-inner::before {
+  content: "";
+  position: absolute;
+  width: 72%;
+  height: 72%;
+  border: 2px dashed rgba(245, 213, 71, 0.45);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.cmba-map-pin {
+  position: relative;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  background: var(--cmba-yellow);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.cmba-map-label {
+  position: absolute;
+  z-index: 2;
+  top: 28%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+}
+
+/* Right column: areas */
+.cmba-col-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cmba-areas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cmba-area-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--cmba-border);
+  border-radius: 8px;
+  font-size: 0.9375rem;
+}
+
+.cmba-area-icon {
+  flex-shrink: 0;
+  width: 10px;
+  height: 14px;
+  background: var(--cmba-yellow);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.cmba-area-text {
+  flex: 1;
+}
+
+/* CTAs — presentable, still plain links editable in admin */
+.cmba-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.25rem;
+}
+
+.cmba-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0.65rem 1.15rem;
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.2;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.cmba-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.cmba-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.cmba-btn-primary {
+  flex: 1 1 140px;
+  background: var(--cmba-blue);
+  color: #fff;
+}
+
+.cmba-btn-primary:hover {
+  background: var(--cmba-blue-hover);
+}
+
+.cmba-btn-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.cmba-btn-call {
+  flex: 1 1 180px;
+  background: var(--cmba-yellow);
+  color: var(--cmba-ink);
+  justify-content: flex-start;
+}
+
+.cmba-btn-call:hover {
+  background: var(--cmba-yellow-hover);
+}
+
+.cmba-call-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z'/%3E%3C/svg%3E") center / contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.cmba-call-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.cmba-call-prefix {
+  font-size: 0.75rem;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.cmba-call-num {
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
