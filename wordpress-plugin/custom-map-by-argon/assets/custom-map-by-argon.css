@@ -1,0 +1,45 @@
+.cma-widget {
+  max-width: 900px;
+  margin: 16px 0;
+  font-family: Arial, sans-serif;
+}
+
+.cma-card {
+  background: #fff;
+  border: 1px solid #dcdcdc;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.cma-header h2 {
+  margin: 0;
+  color: #0060a9;
+}
+
+.cma-header p {
+  margin: 6px 0 0;
+  color: #666;
+}
+
+.cma-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.cma-item h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.cma-meta {
+  margin: 0 0 6px;
+  color: #0060a9;
+  font-size: 16px;
+}
+
+.cma-sub {
+  margin: 0;
+  color: #444;
+}
