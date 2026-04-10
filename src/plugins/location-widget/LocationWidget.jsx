@@ -5,6 +5,12 @@ import { defaultLocationWidgetItems } from "./data";
 const LocationWidget = ({ items = defaultLocationWidgetItems, className = "" }) => {
   return (
     <div className={`w-full space-y-5 ${className}`.trim()}>
+      <div className="global-bg-color box-shadow rounded-xl px-7 py-5">
+        <h2 className="font-vivita font-medium text-xl text-[#0060A9]">
+          Custom Map
+        </h2>
+        <p className="text-sm text-gray-500 mt-1">by Argon</p>
+      </div>
       {items.map((item) => (
         <div
           key={item.id}

@@ -1,26 +1,26 @@
 export const defaultLocationWidgetItems = [
   {
     id: 1,
-    localCategory: "Buildings",
-    count: "5",
-    consumptions: "21.4 kWh",
+    localCategory: "Placeholder Area A",
+    count: "00",
+    consumptions: "00.0 kWh",
   },
   {
     id: 2,
-    localCategory: "Floors",
-    count: "55",
-    consumptions: "21.4 kWh",
+    localCategory: "Placeholder Area B",
+    count: "00",
+    consumptions: "00.0 kWh",
   },
   {
     id: 3,
-    localCategory: "Rooms",
-    count: "505",
-    consumptions: "21.4 kWh",
+    localCategory: "Placeholder Area C",
+    count: "00",
+    consumptions: "00.0 kWh",
   },
   {
     id: 4,
-    localCategory: "Zones",
-    count: "5",
-    consumptions: "21.5 kWh",
+    localCategory: "Placeholder Area D",
+    count: "00",
+    consumptions: "00.0 kWh",
   },
 ];
